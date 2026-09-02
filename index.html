@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vox Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app" class="app" data-screen="title">
+
+  <!-- ===== Top HUD ===== -->
+  <header class="hud hud-top" id="hudTop">
+    <div class="badge badge-level">
+      <span class="lv num" id="hudFloor">FLOOR 1 / 5</span>
+      <span class="lvname" id="hudFloorName">Mossy Cellar</span>
+    </div>
+    <div class="meter meter-time">
+      <div class="meter-head"><span data-i18n="time">Time</span><span class="num" id="hudTimeVal">45s</span></div>
+      <div class="bar bar-time"><div class="fill" id="hudTimeFill"></div></div>
+    </div>
+    <div class="meter meter-hp">
+      <div class="meter-head"><span id="hudBossName">Bog Slime</span><span class="num" id="hudBossHp">100</span></div>
+      <div class="bar bar-hp"><div class="fill" id="hudBossFill"></div></div>
+    </div>
+    <div class="badge badge-weak" id="hudWeak">
+      <span class="weak-label" data-i18n="weakTo">WEAK TO</span>
+      <span class="weak-spell" id="hudWeakSpell">⚡ Thunder</span>
+    </div>
+    <div class="score">
+      <span class="score-label" data-i18n="score">SCORE</span>
+      <span class="num" id="hudScore">0</span>
+    </div>
+  </header>
+
+  <!-- ===== Scene ===== -->
+  <main class="stage" id="stage">
+    <div class="scene-wrap" id="sceneWrap">
+      <canvas id="scene" width="480" height="270" aria-label="Battle scene"></canvas>
+      <div class="scene-layer" id="sceneLayer">
+        <div class="banner" id="banner" hidden></div>
+        <div class="combo num" id="combo" hidden></div>
+        <div class="bubble" id="bossBubble" hidden></div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <section class="overlay" id="ovTitle">
+      <div class="card card-title">
+        <div class="title-art" id="titleArt"></div>
+        <h1 class="game-title" data-i18n="title">VOX TOWER</h1>
+        <p class="tagline" data-i18n="tagline">Sing to cast spells. Climb five floors. Cleanse the tower.</p>
+
+        <div class="mic-box" id="micBox">
+          <button class="btn btn-line" id="btnMic" type="button" data-i18n="enableMic">Enable microphone</button>
+          <div class="mic-live" id="micLive" hidden>
+            <div class="mic-meter"><div class="mic-fill" id="micFill"></div><div class="mic-thresh" id="micThresh"></div></div>
+            <div class="mic-note num" id="micNote">—</div>
+          </div>
+          <p class="mic-status" id="micStatus" data-i18n="micIdle">Allow the microphone, then hum to test it.</p>
+        </div>
+
+        <div class="settings">
+          <div class="setting">
+            <span class="setting-label" data-i18n="voiceRange">Voice range</span>
+            <div class="seg" id="segRange">
+              <button type="button" data-range="kid" data-i18n="rangeKid">Kid</button>
+              <button type="button" data-range="adult" data-i18n="rangeAdult">Grown-up</button>
+              <button type="button" data-range="wide" data-i18n="rangeWide">Wide</button>
+            </div>
+            <span class="setting-note num" id="rangeNote">E3 – G#6</span>
+          </div>
+          <div class="setting">
+            <label class="setting-label" for="thresh" data-i18n="sensitivity">Mic sensitivity</label>
+            <input type="range" id="thresh" min="0.1" max="0.8" step="0.01" value="0.35">
+          </div>
+          <div class="setting setting-row">
+            <div class="seg" id="segLang">
+              <button type="button" data-lang="en">EN</button>
+              <button type="button" data-lang="zh">中文</button>
+            </div>
+            <button type="button" class="toggle" id="btnSfx" aria-pressed="true"><span data-i18n="sound">Sound</span> <span id="sfxState">ON</span></button>
+          </div>
+        </div>
+
+        <button class="btn btn-gold btn-big" id="btnStart" type="button" data-i18n="startClimb">Start climbing</button>
+        <p class="fineprint" data-i18n="noMic">No microphone? Hold keys 1–5 or press and hold a spell slot.</p>
+      </div>
+    </section>
+
+    <!-- Floor intro -->
+    <section class="overlay" id="ovIntro" hidden>
+      <div class="card card-intro">
+        <div class="eyebrow num" id="introFloor">── FLOOR 1 / 5 ──</div>
+        <h2 class="floor-name" id="introName">Mossy Cellar</h2>
+        <div class="intro-boss" id="introBoss"></div>
+        <div class="taunt" id="introTaunt">…</div>
+        <div class="intro-hints num" id="introHints"></div>
+        <button class="btn btn-gold btn-big" id="btnBegin" type="button" data-i18n="begin">Start!</button>
+      </div>
+    </section>
+
+    <!-- Result (victory / defeat / final) -->
+    <section class="overlay" id="ovResult" hidden>
+      <div class="card card-result" id="resultCard"></div>
+    </section>
+  </main>
+
+  <!-- ===== Pitch dashboard ===== -->
+  <footer class="hud hud-bottom" id="hudBottom">
+    <div class="dash-head">
+      <span class="dash-title" data-i18n="dashTitle">LIVE PITCH DASHBOARD</span>
+      <span class="dash-sub num" id="dashRange">log scale · E3 – G#6</span>
+    </div>
+    <div class="dash-body">
+      <div class="slots" id="slots">
+        <canvas class="trace" id="trace" aria-hidden="true"></canvas>
+      </div>
+      <div class="readout">
+        <div class="read-note num" id="readNote">—</div>
+        <div class="read-hz num" id="readHz">0 Hz</div>
+        <div class="read-hint" id="readHint">…</div>
+      </div>
+      <div class="power">
+        <div class="power-label" data-i18n="chantPower">CHANT<br>POWER</div>
+        <div class="vmeter" id="vmeter">
+          <div class="vfill" id="volFill"></div>
+          <div class="vthresh" id="volThresh"></div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script src="js/pitch.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
