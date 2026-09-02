@@ -14,6 +14,7 @@
   --gold-light: #fff0a8;
   --hp: #ff5c8a;
   --ok: #5ce27a;
+  --danger: #ff5c5c;
   --flame: #ff6b3d;
   --frost: #5ee0ff;
   --thunder: #ffe14d;
@@ -34,11 +35,12 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: none;
 }
-html[lang="zh"] body { font-size: 17px; }
+html[lang="zh-CN"] body { font-size: 17px; }
 button { font: inherit; color: inherit; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .num { font-family: var(--display); font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
+.row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 .app {
   height: 100vh;
@@ -83,6 +85,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 .badge-weak.pulse { animation: weakpulse .6s ease-out 1; }
 @keyframes weakpulse { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
+.hearts { display: flex; gap: 4px; align-items: center; }
+.hearts canvas { width: 27px; height: 27px; image-rendering: pixelated; }
+.hearts canvas.lost { animation: heartlost .5s ease-out; }
+@keyframes heartlost { 0% { transform: scale(1.6); filter: brightness(2); } 100% { transform: scale(1); filter: brightness(1); } }
+
 .meter { flex: 1 1 160px; min-width: 120px; }
 .meter-head {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -123,6 +130,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   background: var(--sky-top);
 }
 .scene-layer { position: absolute; inset: 0; pointer-events: none; }
+.hitflash { position: absolute; inset: 0; background: var(--danger); opacity: 0; animation: hitflash .45s ease-out; }
+@keyframes hitflash { 0% { opacity: .45; } 100% { opacity: 0; } }
 
 .banner {
   position: absolute;
@@ -139,7 +148,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   animation: bannerin .35s ease-out;
 }
 .banner.gold { color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 24px rgba(255, 204, 51, .4); }
-.banner.red { color: #ff8a8a; box-shadow: 0 0 0 2px #ff5c5c, 0 0 24px rgba(255, 92, 92, .4); }
+.banner.red { color: #ff8a8a; box-shadow: 0 0 0 2px var(--danger), 0 0 24px rgba(255, 92, 92, .4); }
 @keyframes bannerin { from { transform: translate(-50%, -12px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
 .combo {
@@ -152,7 +161,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 }
 @keyframes combopop { from { transform: scale(1.5); } to { transform: scale(1); } }
 
-.bubble {
+.bubble, .action {
   position: absolute;
   width: max-content;
   max-width: min(46%, 280px);
@@ -164,7 +173,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   box-shadow: 0 0 0 2px var(--line-bright), 0 4px 0 2px var(--ink);
   transform: translate(-100%, -100%);
 }
-.bubble::after {
+.bubble::after, .action::after {
   content: "";
   position: absolute;
   right: 10px; bottom: -10px;
@@ -172,6 +181,27 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   border-top-color: var(--line-bright);
   border-bottom: 0;
 }
+
+/* boss actions: red = attack to block, gold = rune pattern */
+.action { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 96px; }
+.action.attack { box-shadow: 0 0 0 2px var(--danger), 0 0 18px rgba(255, 92, 92, .5), 0 4px 0 2px var(--ink); animation: actpulse .5s ease-in-out infinite alternate; }
+.action.attack::after { border-top-color: var(--danger); }
+.action.rune { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(255, 204, 51, .5), 0 4px 0 2px var(--ink); }
+.action.rune::after { border-top-color: var(--gold); }
+.action.shake { animation: actshake .25s ease-out; }
+@keyframes actpulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
+@keyframes actshake { 0%, 100% { margin-left: 0; } 25% { margin-left: -5px; } 75% { margin-left: 5px; } }
+.act-label { font-family: var(--display); font-size: clamp(8px, 1.5vmin, 11px); letter-spacing: .1em; }
+.action.attack .act-label { color: #ff8a8a; }
+.action.rune .act-label { color: var(--gold); }
+.act-icons { display: flex; gap: 8px; align-items: center; }
+.act-icon { font-size: clamp(18px, 4vmin, 30px); line-height: 1; filter: grayscale(.6) brightness(.7); transition: filter .15s, transform .15s; }
+.act-icon.next { filter: none; transform: scale(1.15); }
+.act-icon.done { filter: none; opacity: .55; }
+.action.attack .act-icon { filter: none; }
+.act-timer { width: 100%; height: 5px; background: rgba(0, 0, 0, .4); }
+.act-timer i { display: block; height: 100%; width: 100%; background: var(--danger); transform-origin: left; }
+.action.rune .act-timer i { background: var(--gold); }
 
 /* ---------- Overlays & cards ---------- */
 .overlay {
@@ -212,7 +242,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   color: var(--text);
   text-shadow: 3px 3px 0 var(--ink);
 }
-.intro-boss canvas, .result-art canvas { image-rendering: pixelated; }
+.intro-boss canvas, .result-art canvas, .map canvas { image-rendering: pixelated; }
 .intro-boss { animation: bob 1.4s ease-in-out infinite; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .taunt {
@@ -222,9 +252,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   max-width: 44ch;
   color: var(--text);
 }
-.intro-hints { font-size: 9px; line-height: 2.1; color: var(--gold-light); max-width: 52ch; }
+.intro-hints { font-size: 9px; line-height: 2.1; color: var(--gold-light); max-width: 56ch; }
 .intro-hints b { color: var(--gold); font-weight: 400; }
-html[lang="zh"] .intro-hints { font-size: 11px; }
+html[lang="zh-CN"] .intro-hints { font-size: 11px; }
 
 .btn {
   font-family: var(--display);
@@ -246,8 +276,8 @@ html[lang="zh"] .intro-hints { font-size: 11px; }
 .btn-big { font-size: 13px; padding: 16px 28px; letter-spacing: .08em; }
 .btn-line { font-size: 10px; }
 .btn[disabled] { opacity: .5; cursor: default; }
-html[lang="zh"] .btn { font-size: 15px; }
-html[lang="zh"] .btn-big { font-size: 18px; }
+html[lang="zh-CN"] .btn { font-size: 15px; }
+html[lang="zh-CN"] .btn-big { font-size: 18px; }
 
 .fineprint { margin: 0; font-size: 13px; color: var(--muted); }
 
@@ -278,24 +308,6 @@ html[lang="zh"] .btn-big { font-size: 18px; }
 .toggle[aria-pressed="true"] { color: var(--text); }
 input[type="range"] { accent-color: var(--gold); width: 160px; }
 
-/* result card */
-.result-title { font-family: var(--display); font-size: clamp(18px, 4vmin, 30px); letter-spacing: .12em; text-shadow: 3px 3px 0 var(--ink); }
-.result-title.win { color: var(--gold); text-shadow: 3px 3px 0 var(--gold-dark), 6px 6px 0 var(--ink); }
-.result-title.lose { color: #ff8a8a; }
-.result-art { display: flex; gap: 10px; justify-content: center; }
-.loot-name { color: var(--gold-light); font-size: 17px; }
-.loot-flavor { color: var(--muted); font-size: 14px; margin: 0; }
-.score-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.score-box {
-  background: var(--ink); box-shadow: 0 0 0 2px var(--line);
-  padding: 8px 12px; min-width: 96px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.score-box span { font-size: 12px; color: var(--muted); }
-.score-box b { font-family: var(--display); font-size: 12px; color: var(--text); font-weight: 400; }
-.score-box.total b { color: var(--gold); }
-.result-text { margin: 0; color: var(--muted); max-width: 40ch; }
-
 /* high scores (localStorage) */
 .hiscores {
   width: 100%;
@@ -324,6 +336,63 @@ input[type="range"] { accent-color: var(--gold); width: 160px; }
   box-shadow: 0 0 0 2px var(--line); text-align: center;
 }
 .name-input:focus { outline: none; box-shadow: 0 0 0 2px var(--gold); }
+
+/* stars */
+.stars { display: inline-flex; gap: 4px; font-size: 20px; line-height: 1; }
+.stars .on { color: var(--gold); text-shadow: 0 0 8px rgba(255, 204, 51, .6); }
+.stars .off { color: #2d3470; }
+.stars.small { font-size: 13px; gap: 2px; }
+.stars-row { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+.stars-row .stars { animation: combopop .4s ease-out; }
+
+/* result card */
+.result-title { font-family: var(--display); font-size: clamp(18px, 4vmin, 30px); letter-spacing: .12em; text-shadow: 3px 3px 0 var(--ink); }
+.result-title.win { color: var(--gold); text-shadow: 3px 3px 0 var(--gold-dark), 6px 6px 0 var(--ink); }
+.result-title.lose { color: #ff8a8a; }
+.result-art { display: flex; gap: 10px; justify-content: center; }
+.loot-name { color: var(--gold-light); font-size: 17px; }
+.loot-flavor { color: var(--muted); font-size: 14px; margin: 0; }
+.loot-effect { margin: 0; font-size: 14px; color: var(--ok); background: var(--ink); box-shadow: 0 0 0 2px var(--line); padding: 6px 12px; }
+.score-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.score-box {
+  background: var(--ink); box-shadow: 0 0 0 2px var(--line);
+  padding: 8px 12px; min-width: 96px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.score-box span { font-size: 12px; color: var(--muted); }
+.score-box b { font-family: var(--display); font-size: 12px; color: var(--text); font-weight: 400; }
+.score-box.total b { color: var(--gold); }
+.result-text { margin: 0; color: var(--muted); max-width: 40ch; }
+
+/* wand tuning */
+.card-tune { gap: 14px; }
+.tune-text { margin: 0; font-size: 18px; max-width: 34ch; color: var(--text); }
+.tune-note { font-size: 24px; color: var(--gold-light); min-height: 1.2em; }
+.tune-bar { width: min(320px, 100%); height: 14px; background: var(--ink); box-shadow: 0 0 0 2px var(--line); }
+.tune-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--frost), var(--ok), var(--thunder)); transition: width .08s linear; }
+.tune-msg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); }
+.tune-msg.ok { color: var(--ok); }
+.tune-msg.warn { color: var(--thunder); }
+
+/* tower map */
+.card-map { gap: 14px; }
+.map { position: relative; width: min(420px, 100%); display: flex; flex-direction: column; gap: 6px; padding-left: 52px; }
+.map-row {
+  display: grid; grid-template-columns: auto 44px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  height: 52px; padding: 4px 10px;
+  background: var(--ink); box-shadow: 0 0 0 2px var(--line);
+  text-align: left;
+}
+.map-row.current { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(255, 204, 51, .35); }
+.map-row.locked { opacity: .55; }
+.map-row .map-no { font-family: var(--display); font-size: 9px; color: var(--muted); width: 3.5ch; }
+.map-row.current .map-no { color: var(--gold); }
+.map-row .map-name { font-size: 15px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-row .map-name small { display: block; font-size: 12px; color: var(--muted); }
+.map-row canvas { display: block; }
+.map-wizard { position: absolute; left: 0; width: 48px; height: 48px; transition: top .8s cubic-bezier(.3, 1.4, .5, 1); }
+.map-wizard canvas { display: block; }
+@media (prefers-reduced-motion: reduce) { .map-wizard { transition: none; } }
 
 /* ---------- Pitch dashboard ---------- */
 .hud-bottom { border-bottom: 0; padding-top: 6px; }
@@ -360,7 +429,7 @@ input[type="range"] { accent-color: var(--gold); width: 160px; }
 }
 .slot-icon { font-size: 18px; line-height: 1; filter: grayscale(.4); }
 .slot-name { font-family: var(--display); font-size: 8px; color: var(--text); letter-spacing: .04em; }
-html[lang="zh"] .slot-name { font-size: 11px; }
+html[lang="zh-CN"] .slot-name { font-size: 11px; }
 .slot-range { font-family: var(--display); font-size: 7px; color: var(--muted); }
 .slot-charge { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(0, 0, 0, .35); }
 .slot-charge i { display: block; height: 100%; width: 0%; background: var(--c, var(--gold)); }
@@ -376,6 +445,13 @@ html[lang="zh"] .slot-name { font-size: 11px; }
   width: 6px; height: 6px;
   background: var(--gold);
   box-shadow: 0 0 6px var(--gold);
+}
+.slot.target::after {
+  content: "";
+  position: absolute; top: 4px; left: 4px;
+  width: 6px; height: 6px;
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
 }
 .slot.fired { animation: fired .18s ease-out; }
 @keyframes fired { 0% { filter: brightness(1.7); } 100% { filter: brightness(1); } }
@@ -398,9 +474,10 @@ html[lang="zh"] .slot-name { font-size: 11px; }
 }
 .read-hint.ok { color: var(--ok); }
 .read-hint.warn { color: var(--thunder); }
+.read-hint.danger { color: #ff8a8a; }
 
 .power { flex: 0 0 auto; display: flex; gap: 8px; align-items: stretch; }
-.power-label { font-family: var(--display); font-size: 7px; line-height: 1.6; color: var(--muted); writing-mode: horizontal-tb; align-self: center; text-align: right; }
+.power-label { font-family: var(--display); font-size: 7px; line-height: 1.6; color: var(--muted); align-self: center; text-align: right; }
 .vmeter { width: 22px; position: relative; background: var(--ink); box-shadow: 0 0 0 2px var(--line); overflow: hidden; }
 .vfill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: linear-gradient(0deg, var(--frost), var(--ok) 60%, var(--thunder)); transition: height .05s linear; }
 .vfill.hot { filter: brightness(1.2); }
@@ -417,6 +494,7 @@ html[lang="zh"] .slot-name { font-size: 11px; }
   .slot { min-height: 54px; }
   .card { padding: 16px 14px 18px; }
   .settings .setting { gap: 8px; }
+  .map { padding-left: 44px; }
 }
 @media (max-width: 480px) {
   .slot-name { display: none; }
@@ -426,8 +504,9 @@ html[lang="zh"] .slot-name { font-size: 11px; }
   .dash-title { font-size: 8px; }
   .power-label { display: none; }
   .hud { padding: 6px 8px; }
+  .hearts canvas { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .intro-boss, .banner, .combo, .slot.fired, .badge-weak.pulse { animation: none; }
-  .bar .fill, .vfill { transition: none; }
+  .intro-boss, .banner, .combo, .slot.fired, .badge-weak.pulse, .action.attack, .action.shake, .hearts canvas.lost, .stars-row .stars { animation: none; }
+  .bar .fill, .vfill, .tune-bar i { transition: none; }
 }

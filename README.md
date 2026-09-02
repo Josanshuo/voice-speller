@@ -27,18 +27,31 @@ Opening `index.html` directly also works in Chrome and Edge.
 
 1. **Enable microphone** on the title screen, then hum to see the meter move.
    Adjust *Mic sensitivity* until quiet room noise stays under the gold line.
-2. Pick a **voice range**: *Kid* (E3 – G#6) for children and higher voices,
-   *Grown-up* (C2 – E5) for lower voices, *Wide* (C2 – C7, one octave per spell,
-   like the original).
+2. **Tune your wand**: sing your lowest comfortable note, then your highest,
+   and the five spell bands are spread across your own range. The presets
+   (*Kid* E3 – G#6, *Grown-up* C2 – E5, *Wide* C2 – C7) remain available.
 3. Each floor shows the monster's weakness and a voice tip. Hold a steady note
    inside that spell's band; every third of a second on pitch fires a spell.
-   The weak spell does 12 damage, anything else does 3.
-4. Beat the monster before the countdown ends. Finishing with only the weak
-   spell earns the *Perfect bonus*; leftover seconds earn the *Time bonus*.
-5. The final warden changes its weakness at half health.
-6. The five best runs on this device are kept in the browser (localStorage)
-   and shown on the title screen; a run that makes the table can be given a
-   short name. Scores never leave the device.
+   The weak spell does 12 damage, anything else does 3. Every monster shifts
+   its weakness once at half health (the roof boss twice) and changes colour.
+   The pitch ladder beside the wizard shows your note, the target band, and an
+   arrow toward it.
+4. **Attacks**: a red icon over the monster is a wind-up. Sing that spell
+   before the bar empties to block it, or lose a heart. Three hearts per run;
+   running out ends the floor (retrying restores them).
+5. **Runes**: a gold chain of icons is an opening. Sing them in order for a
+   30-damage rune break. Neither blocks nor rune steps count as wrong spells.
+6. Beat the monster before the countdown ends. Stars: one for clearing, one
+   for finishing with 40% of the time left, one for no wrong spells and no
+   hearts lost. Finishing with only the weak spell earns the *Perfect bonus*.
+7. **Loot has effects**: Bog Tonic refills a heart each floor, the Echo Wand
+   charges spells faster, the Cobweb Needle lengthens block windows, the Frost
+   Ring adds eight seconds per floor, and the Warden's Crest opens a bonus
+   roof floor with a three-phase boss.
+8. A tower map between floors shows your climb and best stars per floor. The
+   five best runs on this device are kept in the browser (localStorage) and
+   shown on the title screen; a run that makes the table can be given a short
+   name. Scores never leave the device.
 
 **No microphone?** Hold keys **1–5**, or press and hold a spell slot on the
 dashboard. The **EN / 中文** toggle switches language.

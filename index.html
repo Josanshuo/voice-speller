@@ -18,6 +18,7 @@
       <span class="lv num" id="hudFloor">FLOOR 1 / 5</span>
       <span class="lvname" id="hudFloorName">Mossy Cellar</span>
     </div>
+    <div class="hearts" id="hearts" aria-label="Hearts"></div>
     <div class="meter meter-time">
       <div class="meter-head"><span data-i18n="time">Time</span><span class="num" id="hudTimeVal">45s</span></div>
       <div class="bar bar-time"><div class="fill" id="hudTimeFill"></div></div>
@@ -41,9 +42,11 @@
     <div class="scene-wrap" id="sceneWrap">
       <canvas id="scene" width="480" height="270" aria-label="Battle scene"></canvas>
       <div class="scene-layer" id="sceneLayer">
+        <div class="hitflash" id="hitFlash" hidden></div>
         <div class="banner" id="banner" hidden></div>
         <div class="combo num" id="combo" hidden></div>
         <div class="bubble" id="bossBubble" hidden></div>
+        <div class="action" id="bossAction" hidden></div>
       </div>
     </div>
 
@@ -52,12 +55,15 @@
       <div class="card card-title">
         <div class="title-art" id="titleArt"></div>
         <h1 class="game-title" data-i18n="title">VOX TOWER</h1>
-        <p class="tagline" data-i18n="tagline">Sing to cast spells. Climb five floors. Cleanse the tower.</p>
+        <p class="tagline" data-i18n="tagline">Sing to cast spells. Climb the tower. Cleanse every floor.</p>
 
         <section class="hiscores" id="hiscores" aria-live="polite"></section>
 
         <div class="mic-box" id="micBox">
-          <button class="btn btn-line" id="btnMic" type="button" data-i18n="enableMic">Enable microphone</button>
+          <div class="row">
+            <button class="btn btn-line" id="btnMic" type="button" data-i18n="enableMic">Enable microphone</button>
+            <button class="btn btn-line" id="btnTune" type="button" data-i18n="tuneBtn">Tune your wand</button>
+          </div>
           <div class="mic-live" id="micLive" hidden>
             <div class="mic-meter"><div class="mic-fill" id="micFill"></div><div class="mic-thresh" id="micThresh"></div></div>
             <div class="mic-note num" id="micNote">—</div>
@@ -72,6 +78,7 @@
               <button type="button" data-range="kid" data-i18n="rangeKid">Kid</button>
               <button type="button" data-range="adult" data-i18n="rangeAdult">Grown-up</button>
               <button type="button" data-range="wide" data-i18n="rangeWide">Wide</button>
+              <button type="button" data-range="custom" data-i18n="rangeCustom" id="rangeCustom" hidden>Tuned</button>
             </div>
             <span class="setting-note num" id="rangeNote">E3 – G#6</span>
           </div>
@@ -90,6 +97,31 @@
 
         <button class="btn btn-gold btn-big" id="btnStart" type="button" data-i18n="startClimb">Start climbing</button>
         <p class="fineprint" data-i18n="noMic">No microphone? Hold keys 1–5 or press and hold a spell slot.</p>
+      </div>
+    </section>
+
+    <!-- Wand tuning -->
+    <section class="overlay" id="ovTune" hidden>
+      <div class="card card-tune">
+        <h2 class="floor-name" data-i18n="tuneTitle">TUNE YOUR WAND</h2>
+        <div class="eyebrow num" id="tuneStep">1 / 2</div>
+        <p class="tune-text" id="tuneText"></p>
+        <div class="tune-note num" id="tuneNote">—</div>
+        <div class="tune-bar"><i id="tuneFill"></i></div>
+        <p class="tune-msg" id="tuneMsg"></p>
+        <div class="row">
+          <button class="btn btn-line" id="btnTuneCancel" type="button" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-gold" id="btnTuneDone" type="button" data-i18n="tuneDoneBtn" hidden>Done</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tower map -->
+    <section class="overlay" id="ovMap" hidden>
+      <div class="card card-map">
+        <h2 class="floor-name" data-i18n="mapTitle">TOWER MAP</h2>
+        <div class="map" id="mapRows"></div>
+        <div class="row" id="mapButtons"></div>
       </div>
     </section>
 
