@@ -6,41 +6,47 @@ GitHub Pages serves that branch at https://josanshuo.github.io/voice-speller/
     python deploy.py "message"      # custom commit message
 
 The branch is a snapshot of dist/ (history is rewritten on every deploy).
+It is built with git plumbing (a temporary index + commit-tree), so no
+checkout, worktree or branch switch is needed.
 """
+import os
 import pathlib
-import shutil
 import subprocess
 import sys
-import tempfile
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).parent.resolve()
+DIST = ROOT / "dist"
 REMOTE = "origin"
 BRANCH = "dist"
 
 
-def run(*args, cwd=ROOT, check=True):
-    print("$", " ".join(args))
-    return subprocess.run(args, cwd=str(cwd), check=check)
+def git(*args, env=None, cwd=ROOT):
+    print("$ git", " ".join(args))
+    return subprocess.run(
+        ["git", *args], cwd=str(cwd), env=env, check=True,
+        capture_output=True, text=True,
+    ).stdout.strip()
 
 
 def main():
     message = sys.argv[1] if len(sys.argv) > 1 else "Deploy static site"
-    run(sys.executable, "build.py")
+    subprocess.run([sys.executable, str(ROOT / "build.py")], check=True)
 
-    tmp = pathlib.Path(tempfile.mkdtemp(prefix="voice-speller-dist-"))
-    wt = tmp / "site"
+    index = ROOT / ".git" / "dist-index"
+    env = dict(os.environ, GIT_INDEX_FILE=str(index))
     try:
-        run("git", "worktree", "prune")
-        run("git", "branch", "-D", BRANCH, check=False)
-        run("git", "worktree", "add", "--orphan", "-b", BRANCH, str(wt))
-        shutil.copytree(ROOT / "dist", wt, dirs_exist_ok=True)
-        run("git", "add", "-A", cwd=wt)
-        run("git", "commit", "-q", "-m", message, cwd=wt)
-        run("git", "push", "--force", REMOTE, f"{BRANCH}:{BRANCH}", cwd=wt)
+        if index.exists():
+            index.unlink()
+        # stage dist/ as the whole tree of the snapshot commit
+        git("--work-tree", str(DIST), "add", "-A", "--force", ".", env=env, cwd=DIST)
+        tree = git("write-tree", env=env)
+        commit = git("commit-tree", tree, "-m", message, env=env)
+        git("update-ref", f"refs/heads/{BRANCH}", commit)
+        print(git("push", "--force", REMOTE, f"refs/heads/{BRANCH}:refs/heads/{BRANCH}"))
     finally:
-        run("git", "worktree", "remove", "--force", str(wt), check=False)
-        shutil.rmtree(tmp, ignore_errors=True)
-    print(f"deployed {BRANCH} -> https://josanshuo.github.io/voice-speller/")
+        if index.exists():
+            index.unlink()
+    print(f"deployed {BRANCH} ({commit[:7]}) -> https://josanshuo.github.io/voice-speller/")
 
 
 if __name__ == "__main__":
