@@ -104,13 +104,20 @@
     <section class="overlay" id="ovTune" hidden>
       <div class="card card-tune">
         <h2 class="floor-name" data-i18n="tuneTitle">TUNE YOUR WAND</h2>
-        <div class="eyebrow num" id="tuneStep">1 / 2</div>
+        <div class="eyebrow num tune-step" id="tuneStep">1 / 2</div>
+        <div class="tune-notes">
+          <span class="tune-chip num" id="tuneLo">LOW —</span>
+          <span class="tune-chip num" id="tuneHi">HIGH —</span>
+        </div>
         <p class="tune-text" id="tuneText"></p>
         <div class="tune-note num" id="tuneNote">—</div>
         <div class="tune-bar"><i id="tuneFill"></i></div>
         <p class="tune-msg" id="tuneMsg"></p>
         <div class="row">
           <button class="btn btn-line" id="btnTuneCancel" type="button" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-line" id="btnTuneRedo" type="button" data-i18n="tuneRedo" hidden>Redo lowest</button>
+          <button class="btn btn-gold" id="btnTuneNext" type="button" data-i18n="tuneNext" hidden>Next: highest note</button>
+          <button class="btn btn-gold" id="btnTuneRetry" type="button" data-i18n="tryAgain" hidden>Try again</button>
           <button class="btn btn-gold" id="btnTuneDone" type="button" data-i18n="tuneDoneBtn" hidden>Done</button>
         </div>
       </div>

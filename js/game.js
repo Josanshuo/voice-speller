@@ -861,21 +861,35 @@
   }
 
   // ---------- wand tuning ----------
-  const tune = { step: 0, hold: 0, samples: [], lo: 0, hi: 0, msg: '', msgCls: '' };
+  // Explicit steps: listen -> captured (confirm with Next) -> listen -> result.
+  // A step only starts listening after a short silence, so a note still being
+  // held from the previous step is never captured twice.
+  const tune = { step: 1, phase: 'listen', hold: 0, samples: [], lo: 0, hi: 0, waitSilence: false, silence: 0, ok: false };
+  function tuneListen(step, needSilence) {
+    tune.step = step; tune.phase = 'listen'; tune.hold = 0; tune.samples = [];
+    tune.waitSilence = !!needSilence; tune.silence = 0;
+    renderTune();
+  }
   async function openTune() {
     sfx.init();
     if (micState !== 'ok') {
       const ok = await enableMic();
       if (!ok) { $('micStatus').textContent = t('tuneNoMic'); $('micStatus').className = 'mic-status err'; return; }
     }
-    tune.step = 1; tune.hold = 0; tune.samples = []; tune.msg = ''; tune.msgCls = '';
+    tune.lo = 0; tune.hi = 0; tune.ok = false;
     G.screen = 'tune';
-    renderTune();
+    tuneListen(1, true);
     showOverlay('tune');
   }
   function updateTune(dt) {
-    if (tune.step < 1 || tune.step > 2) return;
-    if (voice.voiced && voice.level >= settings.threshold) {
+    if (tune.phase !== 'listen') { renderTune(); return; }
+    const singing = voice.voiced && voice.level >= settings.threshold;
+    if (tune.waitSilence) {
+      tune.silence = singing ? 0 : tune.silence + dt;
+      if (tune.silence >= 0.35) { tune.waitSilence = false; tune.silence = 0; }
+      renderTune(); return;
+    }
+    if (singing) {
       tune.samples.push(voice.midi); if (tune.samples.length > 90) tune.samples.shift();
       tune.hold += dt;
     } else {
@@ -885,28 +899,58 @@
     if (tune.hold >= TUNE_HOLD && tune.samples.length) {
       const m = median(tune.samples);
       tune.hold = 0; tune.samples.length = 0;
-      if (tune.step === 1) { tune.lo = m; tune.step = 2; tune.msg = ''; sfx.play('tuneOk'); }
+      if (tune.step === 1) { tune.lo = m; tune.phase = 'captured'; sfx.play('tuneOk'); }
       else { tune.hi = m; finishTune(); }
     }
     renderTune();
   }
   function finishTune() {
     const lo = Math.round(tune.lo) + 1, hi = Math.round(tune.hi) - 1;
-    if (hi - lo < TUNE_MIN_WIDTH) { tune.step = 1; tune.msg = t('tuneNarrow'); tune.msgCls = 'warn'; sfx.play('lose'); return; }
+    tune.phase = 'result';
+    if (hi - lo < TUNE_MIN_WIDTH) { tune.ok = false; sfx.play('lose'); renderTune(); return; }
     settings.customRange = { lo, hi }; settings.range = 'custom';
     store.set('customRange', settings.customRange); store.set('range', settings.range);
-    tune.step = 3; tune.msg = t('tuneDone', { lo: P.midiToName(lo), hi: P.midiToName(hi) }); tune.msgCls = 'ok';
+    tune.ok = true;
     refreshRanges();
     sfx.play('win');
+    renderTune();
   }
   function renderTune() {
-    $('tuneStep').textContent = (tune.step === 3 ? 2 : tune.step) + ' / 2';
-    $('tuneText').textContent = tune.step === 1 ? t('tuneLow') : tune.step === 2 ? t('tuneHigh') : '';
-    $('tuneNote').textContent = voice.voiced ? voice.note : '—';
+    const stepEl = $('tuneStep'), text = $('tuneText'), msg = $('tuneMsg');
+    const loName = tune.lo ? P.midiToName(tune.lo) : '\u2014', hiName = tune.hi ? P.midiToName(tune.hi) : '\u2014';
+    stepEl.textContent = tune.step + ' / 2 \u00b7 ' + t(tune.step === 1 ? 'tuneStepLow' : 'tuneStepHigh');
+    stepEl.className = 'eyebrow num tune-step ' + (tune.step === 1 ? 'low' : 'high');
+    $('tuneLo').textContent = t('low') + ' ' + loName; $('tuneLo').classList.toggle('set', !!tune.lo);
+    $('tuneHi').textContent = t('high') + ' ' + hiName; $('tuneHi').classList.toggle('set', !!tune.hi);
+    $('tuneNote').textContent = voice.voiced ? voice.note : '\u2014';
     $('tuneFill').style.width = (clamp(tune.hold / TUNE_HOLD, 0, 1) * 100) + '%';
-    const msg = $('tuneMsg'); msg.textContent = tune.msg || (tune.hold > 0.2 ? t('tuneHold') : ''); msg.className = 'tune-msg ' + tune.msgCls;
-    $('btnTuneDone').hidden = tune.step !== 3;
-    $('btnTuneCancel').hidden = tune.step === 3;
+    msg.className = 'tune-msg';
+    let showCancel = true, showRedo = false, showNext = false, showDone = false, showRetry = false;
+    if (tune.phase === 'listen') {
+      text.textContent = t(tune.step === 1 ? 'tuneLow' : 'tuneHigh');
+      if (tune.waitSilence) { msg.textContent = t('tuneBreath'); msg.classList.add('warn'); }
+      else msg.textContent = tune.hold > 0.2 ? t('tuneHold') : '';
+      showRedo = tune.step === 2;
+    } else if (tune.phase === 'captured') {
+      text.textContent = t('tuneGotLow', { n: loName });
+      msg.textContent = t('tuneNextHint'); msg.classList.add('ok');
+      showRedo = true; showNext = true;
+    } else if (tune.ok) {
+      const r = settings.customRange;
+      text.textContent = t('tuneDone', { lo: P.midiToName(r.lo), hi: P.midiToName(r.hi) });
+      msg.textContent = ''; msg.classList.add('ok');
+      showDone = true; showCancel = false;
+    } else {
+      const lo = Math.round(tune.lo), hi = Math.round(tune.hi);
+      text.textContent = t('tuneNarrow', { lo: P.midiToName(lo), hi: P.midiToName(hi), n: Math.max(0, hi - lo), min: TUNE_MIN_WIDTH });
+      msg.textContent = t('tuneNarrowHint'); msg.classList.add('warn');
+      showRetry = true;
+    }
+    $('btnTuneCancel').hidden = !showCancel;
+    $('btnTuneRedo').hidden = !showRedo;
+    $('btnTuneNext').hidden = !showNext;
+    $('btnTuneDone').hidden = !showDone;
+    $('btnTuneRetry').hidden = !showRetry;
   }
 
   // ---------- runs & high scores ----------
@@ -1177,6 +1221,9 @@
     $('btnTune').addEventListener('click', () => openTune());
     $('btnTuneCancel').addEventListener('click', () => { sfx.play('ui'); showTitle(); });
     $('btnTuneDone').addEventListener('click', () => { sfx.play('ui'); showTitle(); });
+    $('btnTuneNext').addEventListener('click', () => { sfx.play('ui'); tuneListen(2, true); });
+    $('btnTuneRedo').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tuneListen(1, true); });
+    $('btnTuneRetry').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tune.ok = false; tuneListen(1, true); });
     $('btnStart').addEventListener('click', () => { sfx.init(); sfx.play('ui'); newRun(); });
     $('btnBegin').addEventListener('click', () => { sfx.init(); beginBattle(); });
     document.querySelectorAll('#segRange button').forEach((b) => b.addEventListener('click', () => {
@@ -1208,7 +1255,7 @@
     window.VoxDebug = {
       G, boss, hero, settings, startFloor, beginBattle, keyHeld, tick, nextFloor, newRun, scores, showMap, showTitle, openTune,
       forceAction, setSimVoice(v) { simVoice = v; }, get enemyShots() { return enemyShots; }, tune, bestStars,
-      openTuneNoMic() { tune.step = 1; tune.hold = 0; tune.samples = []; tune.msg = ''; tune.msgCls = ''; G.screen = 'tune'; renderTune(); showOverlay('tune'); },
+      openTuneNoMic() { tune.lo = 0; tune.hi = 0; tune.ok = false; G.screen = 'tune'; tuneListen(1, true); showOverlay('tune'); },
     };
   }
 
