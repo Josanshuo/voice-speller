@@ -360,12 +360,12 @@ html[lang="zh"] .slot-name { font-size: 11px; }
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
   text-align: center;
 }
-.read-note { font-size: 16px; line-height: 1.2; min-height: 1.2em; color: var(--gold-light); }
-.read-hz { font-size: 8px; line-height: 1.4; min-height: 1.4em; color: var(--muted); }
+.read-note { font-size: 16px; line-height: 20px; height: 20px; overflow: hidden; color: var(--gold-light); }
+.read-hz { font-size: 8px; line-height: 12px; height: 12px; overflow: hidden; color: var(--muted); }
 .read-hint {
   font-size: 13px; color: var(--muted);
   /* reserve two lines so a longer hint never reflows the dashboard */
-  min-height: 2.6em; display: flex; align-items: center; justify-content: center;
+  line-height: 1.25; height: 34px; overflow: hidden; display: flex; align-items: center; justify-content: center;
 }
 .read-hint.ok { color: var(--ok); }
 .read-hint.warn { color: var(--thunder); }
