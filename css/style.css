@@ -388,7 +388,7 @@ input[type="range"] { accent-color: var(--gold); width: 160px; }
 .map-row .map-no { font-family: var(--display); font-size: 9px; color: var(--muted); width: 3.5ch; }
 .map-row.current .map-no { color: var(--gold); }
 .map-row .map-name { font-size: 15px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-row .map-name small { display: block; font-size: 12px; color: var(--muted); }
+.map-row .map-name small { display: block; font-size: 12px; line-height: 1.15; color: var(--muted); white-space: normal; }
 .map-row canvas { display: block; }
 .map-wizard { position: absolute; left: 0; width: 48px; height: 48px; transition: top .8s cubic-bezier(.3, 1.4, .5, 1); }
 .map-wizard canvas { display: block; }
