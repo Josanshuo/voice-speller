@@ -1,4 +1,6 @@
 .claude/
+.artifact/
+dist/
 __pycache__/
 *.pyc
 Thumbs.db

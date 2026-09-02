@@ -20,8 +20,8 @@ python -m http.server 8765
 Then open http://localhost:8765 in Chrome or Edge and allow the microphone.
 Opening `index.html` directly also works in Chrome and Edge.
 
-The single-file build (`dist/vox-tower.html`, produced by `python build.py`)
-bundles the sprites and scripts into one page you can send to anyone.
+`python build.py` assembles the deployable site in `dist/`, including
+`dist/vox-tower.html`, a single self-contained file you can send to anyone.
 
 ## How to play
 
@@ -48,7 +48,14 @@ dashboard. The **EN / 中文** toggle switches language.
 - `js/i18n.js` — English and Chinese strings
 - `js/game.js` — rendering, battle logic, HUD, fallback input, sound effects
 - `assets/kenney/` — sprite sheets (see credits)
-- `build.py` — bundles everything into `dist/vox-tower.html`
+- `build.py` — assembles the static site into `dist/` (ignored on `main`)
+- `deploy.py` — builds, then force-pushes `dist/` to the `dist` branch
+
+## Branches
+
+- `main` — source.
+- `dist` — the built static site, served by GitHub Pages at
+  https://josanshuo.github.io/voice-speller/. Refresh it with `python deploy.py`.
 
 ## Credits
 
