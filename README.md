@@ -36,6 +36,9 @@ Opening `index.html` directly also works in Chrome and Edge.
 4. Beat the monster before the countdown ends. Finishing with only the weak
    spell earns the *Perfect bonus*; leftover seconds earn the *Time bonus*.
 5. The final warden changes its weakness at half health.
+6. The five best runs on this device are kept in the browser (localStorage)
+   and shown on the title screen; a run that makes the table can be given a
+   short name. Scores never leave the device.
 
 **No microphone?** Hold keys **1–5**, or press and hold a spell slot on the
 dashboard. The **EN / 中文** toggle switches language.

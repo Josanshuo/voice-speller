@@ -296,6 +296,35 @@ input[type="range"] { accent-color: var(--gold); width: 160px; }
 .score-box.total b { color: var(--gold); }
 .result-text { margin: 0; color: var(--muted); max-width: 40ch; }
 
+/* high scores (localStorage) */
+.hiscores {
+  width: 100%;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  padding: 8px 12px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  text-align: left;
+}
+.hiscores-title { font-family: var(--display); font-size: 9px; letter-spacing: .1em; color: var(--gold-light); }
+.hiscores-empty { margin: 0; font-size: 14px; color: var(--muted); }
+.hiscores-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hiscores-list li { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; font-size: 15px; }
+.hiscores-list .rank { font-size: 9px; color: var(--muted); }
+.hiscores-list .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hiscores-list .score { font-size: 10px; color: var(--text); }
+.hiscores-list .floors { font-size: 8px; color: var(--muted); }
+.hiscores-list li:first-child .rank, .hiscores-list li:first-child .score { color: var(--gold); }
+.run-record { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.best-line { font-family: var(--display); font-size: 10px; color: var(--gold-light); display: flex; gap: 10px; align-items: center; }
+.new-best { font-size: 9px; color: #3a2500; background: var(--gold); padding: 3px 6px; animation: combopop .3s ease-out; }
+.name-row { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+.name-input {
+  font: inherit; font-size: 16px; width: 12ch; padding: 4px 8px;
+  background: var(--ink); color: var(--text); border: 0;
+  box-shadow: 0 0 0 2px var(--line); text-align: center;
+}
+.name-input:focus { outline: none; box-shadow: 0 0 0 2px var(--gold); }
+
 /* ---------- Pitch dashboard ---------- */
 .hud-bottom { border-bottom: 0; padding-top: 6px; }
 .dash-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }

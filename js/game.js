@@ -32,6 +32,33 @@
   if (!I18N[settings.lang]) settings.lang = 'en';
   if (!LV.RANGES[settings.range]) settings.range = 'kid';
 
+  // ---------- local high scores (this browser only) ----------
+  const MAX_SCORES = 5;
+  const scores = {
+    list: (store.get('scores', []) || []).filter((e) => e && typeof e.score === 'number'),
+    lastName: String(store.get('name', '') || ''),
+    best() { return this.list.length ? this.list[0].score : 0; },
+    /** Record (or update) the run's entry; returns its rank or -1 if it missed the table. */
+    record(runId, score, floors) {
+      let e = this.list.find((x) => x.id === runId);
+      if (e) { e.score = Math.max(e.score, score); e.floors = Math.max(e.floors, floors); e.date = Date.now(); }
+      else { e = { id: runId, name: this.lastName, score, floors, date: Date.now() }; this.list.push(e); }
+      this.list.sort((a, b) => b.score - a.score || a.date - b.date);
+      this.list = this.list.slice(0, MAX_SCORES);
+      this.save();
+      const rank = this.list.indexOf(e);
+      return { rank, entry: rank >= 0 ? e : null };
+    },
+    setName(runId, name) {
+      name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 8);
+      this.lastName = name;
+      const e = this.list.find((x) => x.id === runId);
+      if (e) e.name = name;
+      this.save();
+    },
+    save() { store.set('scores', this.list); store.set('name', this.lastName); },
+  };
+
   // ---------- i18n ----------
   function t(key, vars) {
     const dict = I18N[settings.lang] || I18N.en;
@@ -157,7 +184,7 @@
   const G = {
     screen: 'title', floor: 0, timeLeft: 0, score: 0, floorScore: 0, damageScore: 0,
     wrongCasts: 0, combo: 0, bestCombo: 0, charge: [0, 0, 0, 0, 0], cooldown: 0, bossTimer: 6, weak: 2, loots: [],
-    lastBand: -1,
+    lastBand: -1, runId: '', floorsCleared: 0,
   };
 
   // ---------- input: microphone, keys, slot taps ----------
@@ -281,6 +308,7 @@
     $('sfxState').textContent = t(settings.sfx ? 'on' : 'off');
     refreshRanges();
     setMicStatus();
+    renderHighScores();
     updateHudStatic();
     if (G.screen === 'intro') fillIntro();
     if (G.screen === 'result') fillResult(G.resultKind);
@@ -488,6 +516,8 @@
     G.result = { timeBonus, perfect, floorScore: G.floorScore };
     G.score += G.floorScore;
     G.loots.push(F.loot);
+    G.floorsCleared = Math.max(G.floorsCleared, G.floor + 1);
+    if (G.runId) { scores.record(G.runId, G.score, G.floorsCleared); renderHighScores(); } // keep the run's entry current
     resultTimer = setTimeout(() => { G.screen = 'result'; fillResult('win'); showOverlay('result'); }, 1100);
   }
 
@@ -520,6 +550,7 @@
         G.loots.forEach((l) => art.appendChild(spriteCanvas(l.sheet, l.tile, 3)));
         const p = document.createElement('p'); p.className = 'result-text'; p.textContent = t('finalText');
         card.append(h2, art, p);
+        scoreSection(card);
       }
       const grid = document.createElement('div'); grid.className = 'score-grid';
       const box = (label, val, cls) => { const d = document.createElement('div'); d.className = 'score-box' + (cls ? ' ' + cls : ''); const s = document.createElement('span'); s.textContent = label; const b = document.createElement('b'); b.textContent = val; d.append(s, b); return d; };
@@ -530,7 +561,7 @@
       } else {
         grid.append(box(t('finalScore'), String(G.score), 'total'));
         btn.textContent = t('playAgain');
-        btn.addEventListener('click', () => { sfx.play('ui'); G.score = 0; G.loots = []; startFloor(0); });
+        btn.addEventListener('click', () => { sfx.play('ui'); showTitle(); });
       }
       card.append(grid, btn);
     } else {
@@ -539,13 +570,71 @@
       const p = document.createElement('p'); p.className = 'result-text'; p.textContent = t('loseText', { boss: tf(G.floor, 'boss') });
       btn.textContent = t('tryAgain');
       btn.addEventListener('click', () => { sfx.play('ui'); startFloor(G.floor); });
-      card.append(h2, art, p, btn);
+      card.append(h2, art, p);
+      scoreSection(card);
+      card.append(btn);
     }
   }
 
   function nextFloor() {
     if (G.floor + 1 >= NUM_FLOORS) { G.screen = 'result'; fillResult('final'); showOverlay('result'); sfx.play('final'); }
     else startFloor(G.floor + 1);
+  }
+
+  // ---------- runs & high scores ----------
+  function showTitle() {
+    clearTimeout(resultTimer);
+    G.screen = 'title';
+    $('bossBubble').hidden = true; $('banner').hidden = true; $('combo').hidden = true;
+    renderHighScores();
+    showOverlay('title');
+    updateHudStatic();
+  }
+  function newRun() {
+    G.score = 0; G.loots = []; G.floorsCleared = 0;
+    G.runId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    startFloor(0);
+  }
+  function span(cls, text) { const el = document.createElement('span'); el.className = cls; el.textContent = text; return el; }
+
+  function renderHighScores() {
+    const host = $('hiscores'); if (!host) return;
+    host.innerHTML = '';
+    host.appendChild(span('hiscores-title', t('highScores')));
+    if (!scores.list.length) {
+      const p = document.createElement('p'); p.className = 'hiscores-empty'; p.textContent = t('noScores');
+      host.appendChild(p); return;
+    }
+    const ol = document.createElement('ol'); ol.className = 'hiscores-list';
+    scores.list.forEach((e, i) => {
+      const li = document.createElement('li');
+      li.title = new Date(e.date).toLocaleDateString();
+      li.append(span('rank num', String(i + 1)), span('name', e.name || '\u2014'), span('score num', String(e.score)), span('floors num', t('floorsCleared', { n: e.floors })));
+      ol.appendChild(li);
+    });
+    host.appendChild(ol);
+  }
+
+  /** Best-score line (+ NEW BEST tag) and, if the run made the table, a name field. */
+  function scoreSection(card) {
+    const prevBest = scores.list.filter((e) => e.id !== G.runId).reduce((m, e) => Math.max(m, e.score), 0);
+    const r = G.score > 0 && G.runId ? scores.record(G.runId, G.score, G.floorsCleared) : { rank: -1, entry: null };
+    const wrap = document.createElement('div'); wrap.className = 'run-record';
+    const best = document.createElement('div'); best.className = 'best-line';
+    best.appendChild(span('', t('best', { n: Math.max(scores.best(), G.score) })));
+    if (G.score > 0 && G.score > prevBest) best.appendChild(span('new-best', t('newBest')));
+    wrap.appendChild(best);
+    if (r.rank >= 0) {
+      const row = document.createElement('label'); row.className = 'name-row';
+      const input = document.createElement('input');
+      input.type = 'text'; input.className = 'name-input'; input.maxLength = 8; input.autocomplete = 'off'; input.spellcheck = false;
+      input.value = r.entry.name || ''; input.placeholder = t('namePlaceholder'); input.setAttribute('aria-label', t('nameLabel'));
+      input.addEventListener('input', () => { scores.setName(G.runId, input.value); renderHighScores(); });
+      row.append(span('', t('rankLabel', { n: r.rank + 1 })), input);
+      wrap.appendChild(row);
+    }
+    card.appendChild(wrap);
+    renderHighScores();
   }
 
   // ---------- update ----------
@@ -722,7 +811,7 @@
   // ---------- wiring ----------
   function wire() {
     $('btnMic').addEventListener('click', () => { sfx.init(); enableMic(); });
-    $('btnStart').addEventListener('click', () => { sfx.init(); sfx.play('ui'); G.score = 0; G.loots = []; startFloor(0); });
+    $('btnStart').addEventListener('click', () => { sfx.init(); sfx.play('ui'); newRun(); });
     $('btnBegin').addEventListener('click', () => { sfx.init(); beginBattle(); });
     document.querySelectorAll('#segRange button').forEach((b) => b.addEventListener('click', () => { settings.range = b.dataset.range; store.set('range', settings.range); refreshRanges(); if (G.screen === 'intro') fillIntro(); sfx.play('ui'); }));
     document.querySelectorAll('#segLang button').forEach((b) => b.addEventListener('click', () => { settings.lang = b.dataset.lang; store.set('lang', settings.lang); applyLang(); sfx.play('ui'); }));
@@ -731,6 +820,8 @@
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // typing a name, not casting
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= 5) { keyHeld[n - 1] = true; sfx.init(); e.preventDefault(); return; }
       if (e.key === 'Enter' || e.key === ' ') {
@@ -743,7 +834,7 @@
     window.addEventListener('blur', () => { keyHeld.fill(false); tapHeld.fill(false); });
     window.addEventListener('resize', resize);
     // helper for automated checks / debugging in the console
-    window.VoxDebug = { G, boss, settings, startFloor, beginBattle, keyHeld, tick, nextFloor };
+    window.VoxDebug = { G, boss, settings, startFloor, beginBattle, keyHeld, tick, nextFloor, newRun, scores };
   }
 
   async function init() {
