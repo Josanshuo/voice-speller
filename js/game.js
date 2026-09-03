@@ -341,7 +341,7 @@
       if (key === 'chantPower') el.innerHTML = t(key); else el.textContent = t(key);
     });
     document.title = t('title') === 'VOX TOWER' ? 'Vox Tower' : t('title');
-    document.querySelectorAll('#segLang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === settings.lang)));
+    document.querySelectorAll('.seg-lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === settings.lang)));
     $('sfxState').textContent = t(settings.sfx ? 'on' : 'off');
     refreshRanges();
     setMicStatus();
@@ -498,8 +498,19 @@
 
   // ---------- screens ----------
   function showOverlay(name) {
-    ['title', 'tune', 'map', 'intro', 'result'].forEach((n) => { $('ov' + n[0].toUpperCase() + n.slice(1)).hidden = name !== n; });
+    ['start', 'title', 'tune', 'map', 'intro', 'result'].forEach((n) => { $('ov' + n[0].toUpperCase() + n.slice(1)).hidden = name !== n; });
     $('app').dataset.screen = name || 'battle';
+  }
+  function showStart() {
+    clearTimeout(resultTimer);
+    G.screen = 'start';
+    $('bossBubble').hidden = true; $('banner').hidden = true; $('combo').hidden = true; hideAction();
+    const best = scores.list[0];
+    const el = $('startBest');
+    if (best) { el.textContent = t('startBest', { n: best.score, name: best.name || '\u2014' }); el.hidden = false; }
+    else el.hidden = true;
+    showOverlay('start');
+    updateHudStatic();
   }
   function showTitle() {
     clearTimeout(resultTimer);
@@ -788,7 +799,7 @@
       const grid = document.createElement('div'); grid.className = 'score-grid';
       grid.append(box(t('finalScore'), String(G.score), 'total'));
       btn.textContent = t('playAgain');
-      btn.addEventListener('click', () => { sfx.play('ui'); showTitle(); });
+      btn.addEventListener('click', () => { sfx.play('ui'); showStart(); });
       card.append(grid, btn);
     } else {
       const hearts = G.loseReason === 'hearts';
@@ -870,11 +881,17 @@
     tune.waitSilence = !!needSilence; tune.silence = 0;
     renderTune();
   }
-  async function openTune() {
+  async function openTune(origin) {
     sfx.init();
+    tune.origin = origin || 'lobby';
     if (micState !== 'ok') {
       const ok = await enableMic();
-      if (!ok) { $('micStatus').textContent = t('tuneNoMic'); $('micStatus').className = 'mic-status err'; return; }
+      if (!ok) {
+        // No microphone: fall back to the settings screen, which explains the key controls.
+        if (tune.origin === 'start') showTitle();
+        $('micStatus').textContent = t('tuneNoMic'); $('micStatus').className = 'mic-status err';
+        return;
+      }
     }
     tune.lo = 0; tune.hi = 0; tune.ok = false;
     G.screen = 'tune';
@@ -951,6 +968,7 @@
     $('btnTuneNext').hidden = !showNext;
     $('btnTuneDone').hidden = !showDone;
     $('btnTuneRetry').hidden = !showRetry;
+    $('btnTuneSkip').hidden = !(tune.origin === 'start' && !(tune.phase === 'result' && tune.ok));
   }
 
   // ---------- runs & high scores ----------
@@ -1219,8 +1237,12 @@
   function wire() {
     $('btnMic').addEventListener('click', () => { sfx.init(); enableMic(); });
     $('btnTune').addEventListener('click', () => openTune());
-    $('btnTuneCancel').addEventListener('click', () => { sfx.play('ui'); showTitle(); });
-    $('btnTuneDone').addEventListener('click', () => { sfx.play('ui'); showTitle(); });
+    $('btnTuneCancel').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') showStart(); else showTitle(); });
+    $('btnTuneDone').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') newRun(); else showTitle(); });
+    $('btnTuneSkip').addEventListener('click', () => { sfx.play('ui'); newRun(); });
+    $('btnPlay').addEventListener('click', () => { sfx.init(); sfx.play('ui'); openTune('start'); });
+    $('btnSettings').addEventListener('click', () => { sfx.init(); sfx.play('ui'); showTitle(); });
+    $('btnBack').addEventListener('click', () => { sfx.play('ui'); showStart(); });
     $('btnTuneNext').addEventListener('click', () => { sfx.play('ui'); tuneListen(2, true); });
     $('btnTuneRedo').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tuneListen(1, true); });
     $('btnTuneRetry').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tune.ok = false; tuneListen(1, true); });
@@ -1232,7 +1254,7 @@
       if (G.screen === 'intro') fillIntro();
       sfx.play('ui');
     }));
-    document.querySelectorAll('#segLang button').forEach((b) => b.addEventListener('click', () => { settings.lang = b.dataset.lang; store.set('lang', settings.lang); applyLang(); sfx.play('ui'); }));
+    document.querySelectorAll('.seg-lang button').forEach((b) => b.addEventListener('click', () => { settings.lang = b.dataset.lang; store.set('lang', settings.lang); applyLang(); sfx.play('ui'); }));
     $('thresh').addEventListener('input', (e) => { settings.threshold = parseFloat(e.target.value); store.set('threshold', settings.threshold); refreshThreshold(); });
     $('btnSfx').addEventListener('click', () => { settings.sfx = !settings.sfx; store.set('sfx', settings.sfx); $('btnSfx').setAttribute('aria-pressed', String(settings.sfx)); $('sfxState').textContent = t(settings.sfx ? 'on' : 'off'); sfx.init(); sfx.play('ui'); });
 
@@ -1243,7 +1265,7 @@
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= 5) { keyHeld[n - 1] = true; sfx.init(); e.preventDefault(); return; }
       if (e.key === 'Enter' || e.key === ' ') {
-        const ov = ['ovTitle', 'ovTune', 'ovMap', 'ovIntro', 'ovResult'].map($).find((o) => !o.hidden);
+        const ov = ['ovStart', 'ovTitle', 'ovTune', 'ovMap', 'ovIntro', 'ovResult'].map($).find((o) => !o.hidden);
         if (ov && document.activeElement && ov.contains(document.activeElement) && document.activeElement.tagName === 'BUTTON') return;
         if (ov) { const primary = ov.querySelector('.btn-gold:not([hidden])'); if (primary) { e.preventDefault(); primary.click(); } }
       }
@@ -1253,9 +1275,9 @@
     window.addEventListener('resize', resize);
     // helper for automated checks / debugging in the console
     window.VoxDebug = {
-      G, boss, hero, settings, startFloor, beginBattle, keyHeld, tick, nextFloor, newRun, scores, showMap, showTitle, openTune,
+      G, boss, hero, settings, startFloor, beginBattle, keyHeld, tick, nextFloor, newRun, scores, showMap, showTitle, showStart, openTune,
       forceAction, setSimVoice(v) { simVoice = v; }, get enemyShots() { return enemyShots; }, tune, bestStars,
-      openTuneNoMic() { tune.lo = 0; tune.hi = 0; tune.ok = false; G.screen = 'tune'; tuneListen(1, true); showOverlay('tune'); },
+      openTuneNoMic(origin) { tune.origin = origin || 'lobby'; tune.lo = 0; tune.hi = 0; tune.ok = false; G.screen = 'tune'; tuneListen(1, true); showOverlay('tune'); },
     };
   }
 
@@ -1267,13 +1289,14 @@
     wire();
     try { await loadImages(); } catch (e) { console.error(e); }
     $('titleArt').appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 5));
+    $('startArt').appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 7));
     renderHearts();
     resize();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
     setTimeout(resize, 400);
     G.floor = 0; G.weak = FLOORS[0].weak[0]; boss.hp = boss.maxHp = FLOORS[0].hp; G.floorTime = FLOORS[0].time; G.timeLeft = G.floorTime;
     updateHudStatic();
-    showOverlay('title');
+    showStart();
     requestAnimationFrame(loop);
   }
 

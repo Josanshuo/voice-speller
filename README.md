@@ -25,11 +25,12 @@ Opening `index.html` directly also works in Chrome and Edge.
 
 ## How to play
 
-1. **Enable microphone** on the title screen, then hum to see the meter move.
-   Adjust *Mic sensitivity* until quiet room noise stays under the gold line.
-2. **Tune your wand**: sing your lowest comfortable note, then your highest,
-   and the five spell bands are spread across your own range. The presets
-   (*Kid* E3 – G#6, *Grown-up* C2 – E5, *Wide* C2 – C7) remain available.
+1. Press **Start**. The game asks for the microphone and opens **Tune your
+   wand**: sing your lowest comfortable note, confirm it, then your highest,
+   and the five spell bands are spread across your own range. *Skip tuning*
+   keeps the current preset. **Settings & scores** holds the mic test, *Mic
+   sensitivity* (keep quiet room noise under the gold line), the presets
+   (*Kid* E3 – G#6, *Grown-up* C2 – E5, *Wide* C2 – C7) and the high-score table.
 3. Each floor shows the monster's weakness and a voice tip. Hold a steady note
    inside that spell's band; every third of a second on pitch fires a spell.
    The weak spell does 12 damage, anything else does 3. Every monster shifts

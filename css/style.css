@@ -59,7 +59,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   flex: none;
   transition: opacity .3s;
 }
-.app[data-screen="title"] .hud-top { opacity: .35; }
+.app[data-screen="title"] .hud-top, .app[data-screen="start"] .hud-top { opacity: .35; }
 
 .hud-top {
   display: flex;
@@ -364,6 +364,16 @@ input[type="range"] { accent-color: var(--gold); width: 160px; }
 .score-box.total b { color: var(--gold); }
 .result-text { margin: 0; color: var(--muted); max-width: 40ch; }
 
+/* start screen */
+.card-start { background: rgba(21, 27, 75, .78); gap: 16px; padding-top: 28px; }
+.start-art canvas { image-rendering: pixelated; }
+.btn-start { font-size: 16px; padding: 18px 46px; letter-spacing: .16em; animation: startpulse 1.6s ease-in-out infinite; }
+@keyframes startpulse { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.start-hint { margin: 0; color: var(--muted); font-size: 14px; }
+.start-best { font-size: 9px; color: var(--gold-light); }
+.start-row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+html[lang="zh-CN"] .btn-start { font-size: 20px; }
+
 /* wand tuning */
 .card-tune { gap: 14px; }
 .tune-step.low { color: var(--frost); }
@@ -512,6 +522,7 @@ html[lang="zh-CN"] .slot-name { font-size: 11px; }
   .hearts canvas { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .btn-start { animation: none; }
   .intro-boss, .banner, .combo, .slot.fired, .badge-weak.pulse, .action.attack, .action.shake, .hearts canvas.lost, .stars-row .stars { animation: none; }
   .bar .fill, .vfill, .tune-bar i { transition: none; }
 }
