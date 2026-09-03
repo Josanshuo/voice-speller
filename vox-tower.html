@@ -1,0 +1,2675 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vox Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&display=swap">
+  <style>
+/* Vox Tower — single-theme night arcade. Every colour is painted explicitly. */
+:root {
+  --sky-top: #070a24;
+  --sky-bot: #1a2260;
+  --ink: #0b1030;
+  --panel: #151b4b;
+  --panel-2: #1d2460;
+  --line: #4a55b8;
+  --line-bright: #8b95ff;
+  --text: #eef0ff;
+  --muted: #9aa3d9;
+  --gold: #ffcc33;
+  --gold-dark: #b8860b;
+  --gold-light: #fff0a8;
+  --hp: #ff5c8a;
+  --ok: #5ce27a;
+  --danger: #ff5c5c;
+  --flame: #ff6b3d;
+  --frost: #5ee0ff;
+  --thunder: #ffe14d;
+  --gale: #8cff9a;
+  --light: #ffd1f7;
+  --display: "Press Start 2P", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", monospace;
+  --body: "Pixelify Sans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-font-smoothing: none;
+}
+html[lang="zh-CN"] body { font-size: 17px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.num { font-family: var(--display); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+.row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+}
+
+/* ---------- HUD strips ---------- */
+.hud {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border-top: 2px solid var(--line);
+  border-bottom: 2px solid var(--line);
+  padding: 8px 14px;
+  flex: none;
+  transition: opacity .3s;
+}
+.app[data-screen="title"] .hud-top, .app[data-screen="start"] .hud-top { opacity: .35; }
+
+.hud-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-top: 0;
+  min-height: 56px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  white-space: nowrap;
+}
+.badge-level .lv { font-size: 10px; color: var(--gold); }
+.badge-level .lvname { font-size: 15px; color: var(--text); }
+.badge-weak { box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(255, 204, 51, .35); }
+.badge-weak .weak-label { font-family: var(--display); font-size: 8px; letter-spacing: .06em; color: var(--muted); }
+.badge-weak .weak-spell { font-family: var(--display); font-size: 10px; color: var(--gold-light); }
+.badge-weak.pulse { animation: weakpulse .6s ease-out 1; }
+@keyframes weakpulse { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+.hearts { display: flex; gap: 4px; align-items: center; }
+.hearts canvas { width: 27px; height: 27px; image-rendering: pixelated; }
+.hearts canvas.lost { animation: heartlost .5s ease-out; }
+@keyframes heartlost { 0% { transform: scale(1.6); filter: brightness(2); } 100% { transform: scale(1); filter: brightness(1); } }
+
+.meter { flex: 1 1 160px; min-width: 120px; }
+.meter-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; color: var(--muted); margin-bottom: 4px;
+}
+.meter-head .num { font-size: 10px; color: var(--text); }
+.bar {
+  height: 10px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  position: relative;
+  overflow: hidden;
+}
+.bar .fill { position: absolute; inset: 0; width: 100%; transform-origin: left; }
+.bar-time .fill { background: linear-gradient(90deg, #4be07a, #ffe14d 55%, #ff5c5c); }
+.bar-hp .fill { background: linear-gradient(90deg, #ff8fb0, var(--hp)); }
+.bar .fill { transition: transform .12s linear; }
+
+.score { margin-left: auto; text-align: right; }
+.score-label { display: block; font-family: var(--display); font-size: 8px; color: var(--muted); letter-spacing: .06em; }
+.score .num { font-size: 16px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink); }
+
+/* ---------- Stage ---------- */
+.stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: var(--sky-top);
+  overflow: hidden;
+}
+.scene-wrap { position: relative; }
+#scene {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: var(--sky-top);
+}
+.scene-layer { position: absolute; inset: 0; pointer-events: none; }
+.hitflash { position: absolute; inset: 0; background: var(--danger); opacity: 0; animation: hitflash .45s ease-out; }
+@keyframes hitflash { 0% { opacity: .45; } 100% { opacity: 0; } }
+
+.banner {
+  position: absolute;
+  left: 50%; top: 18%;
+  transform: translate(-50%, 0);
+  font-family: var(--display);
+  font-size: clamp(10px, 2.2vmin, 18px);
+  letter-spacing: .12em;
+  color: var(--gold-light);
+  background: rgba(11, 16, 48, .85);
+  padding: 10px 18px;
+  box-shadow: 0 0 0 2px var(--line-bright), 0 0 24px rgba(139, 149, 255, .35);
+  white-space: nowrap;
+  animation: bannerin .35s ease-out;
+}
+.banner.gold { color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 24px rgba(255, 204, 51, .4); }
+.banner.red { color: #ff8a8a; box-shadow: 0 0 0 2px var(--danger), 0 0 24px rgba(255, 92, 92, .4); }
+@keyframes bannerin { from { transform: translate(-50%, -12px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+.combo {
+  position: absolute;
+  right: 6%; top: 12%;
+  font-size: clamp(10px, 2vmin, 16px);
+  color: var(--thunder);
+  text-shadow: 2px 2px 0 var(--ink);
+  animation: combopop .25s ease-out;
+}
+@keyframes combopop { from { transform: scale(1.5); } to { transform: scale(1); } }
+
+.bubble, .action {
+  position: absolute;
+  width: max-content;
+  max-width: min(46%, 280px);
+  font-size: clamp(11px, 1.9vmin, 15px);
+  line-height: 1.3;
+  color: var(--text);
+  background: var(--panel);
+  padding: 8px 10px;
+  box-shadow: 0 0 0 2px var(--line-bright), 0 4px 0 2px var(--ink);
+  transform: translate(-100%, -100%);
+}
+.bubble::after, .action::after {
+  content: "";
+  position: absolute;
+  right: 10px; bottom: -10px;
+  border: 6px solid transparent;
+  border-top-color: var(--line-bright);
+  border-bottom: 0;
+}
+
+/* boss actions: red = attack to block, gold = rune pattern */
+.action { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 96px; }
+.action.attack { box-shadow: 0 0 0 2px var(--danger), 0 0 18px rgba(255, 92, 92, .5), 0 4px 0 2px var(--ink); animation: actpulse .5s ease-in-out infinite alternate; }
+.action.attack::after { border-top-color: var(--danger); }
+.action.rune { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(255, 204, 51, .5), 0 4px 0 2px var(--ink); }
+.action.rune::after { border-top-color: var(--gold); }
+.action.shake { animation: actshake .25s ease-out; }
+@keyframes actpulse { from { filter: brightness(1); } to { filter: brightness(1.25); } }
+@keyframes actshake { 0%, 100% { margin-left: 0; } 25% { margin-left: -5px; } 75% { margin-left: 5px; } }
+.act-label { font-family: var(--display); font-size: clamp(8px, 1.5vmin, 11px); letter-spacing: .1em; }
+.action.attack .act-label { color: #ff8a8a; }
+.action.rune .act-label { color: var(--gold); }
+.act-icons { display: flex; gap: 8px; align-items: center; }
+.act-icon { font-size: clamp(18px, 4vmin, 30px); line-height: 1; filter: grayscale(.6) brightness(.7); transition: filter .15s, transform .15s; }
+.act-icon.next { filter: none; transform: scale(1.15); }
+.act-icon.done { filter: none; opacity: .55; }
+.action.attack .act-icon { filter: none; }
+.act-timer { width: 100%; height: 5px; background: rgba(0, 0, 0, .4); }
+.act-timer i { display: block; height: 100%; width: 100%; background: var(--danger); transform-origin: left; }
+.action.rune .act-timer i { background: var(--gold); }
+
+/* ---------- Overlays & cards ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: radial-gradient(ellipse at center, rgba(11, 16, 48, .55), rgba(7, 10, 36, .92));
+  overflow: auto;
+}
+.card {
+  width: min(560px, 100%);
+  text-align: center;
+  background: var(--panel);
+  padding: 22px 24px 24px;
+  box-shadow: 0 0 0 2px var(--line), 0 0 0 4px var(--ink), 0 0 0 6px var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.card h1, .card h2 { margin: 0; text-wrap: balance; }
+.game-title {
+  font-family: var(--display);
+  font-size: clamp(22px, 5vmin, 38px);
+  color: var(--gold);
+  letter-spacing: .06em;
+  text-shadow: 3px 3px 0 var(--gold-dark), 6px 6px 0 var(--ink);
+}
+.tagline { margin: 0; color: var(--muted); max-width: 40ch; }
+.title-art { display: flex; justify-content: center; gap: 10px; image-rendering: pixelated; }
+.title-art canvas { image-rendering: pixelated; }
+.eyebrow { font-size: 10px; color: var(--muted); letter-spacing: .1em; }
+.floor-name {
+  font-family: var(--display);
+  font-size: clamp(16px, 3.4vmin, 26px);
+  color: var(--text);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+.intro-boss canvas, .result-art canvas, .map canvas { image-rendering: pixelated; }
+.intro-boss { animation: bob 1.4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.taunt {
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line-bright);
+  padding: 8px 14px;
+  max-width: 44ch;
+  color: var(--text);
+}
+.intro-hints { font-size: 9px; line-height: 2.1; color: var(--gold-light); max-width: 56ch; }
+.intro-hints b { color: var(--gold); font-weight: 400; }
+html[lang="zh-CN"] .intro-hints { font-size: 11px; }
+
+.btn {
+  font-family: var(--display);
+  font-size: 11px;
+  padding: 12px 18px;
+  border: 0;
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: 0 0 0 2px var(--line), 0 4px 0 0 var(--ink), 0 4px 0 2px var(--line);
+  transition: transform .06s;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--line), 0 1px 0 0 var(--ink), 0 1px 0 2px var(--line); }
+.btn-gold {
+  background: var(--gold);
+  color: #3a2500;
+  box-shadow: 0 0 0 2px var(--ink), 0 5px 0 0 var(--gold-dark), 0 5px 0 2px var(--ink);
+}
+.btn-gold:active { box-shadow: 0 0 0 2px var(--ink), 0 1px 0 0 var(--gold-dark), 0 1px 0 2px var(--ink); }
+.btn-big { font-size: 13px; padding: 16px 28px; letter-spacing: .08em; }
+.btn-line { font-size: 10px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+html[lang="zh-CN"] .btn { font-size: 15px; }
+html[lang="zh-CN"] .btn-big { font-size: 18px; }
+
+.fineprint { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* mic check */
+.mic-box { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.mic-live { display: flex; align-items: center; gap: 12px; width: min(360px, 100%); }
+.mic-meter { flex: 1; height: 14px; background: var(--ink); box-shadow: 0 0 0 2px var(--line); position: relative; }
+.mic-fill { position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, var(--frost), var(--ok)); }
+.mic-fill.hot { background: linear-gradient(90deg, var(--ok), var(--thunder)); }
+.mic-thresh { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--gold); }
+.mic-note { font-size: 11px; min-width: 6ch; text-align: right; color: var(--gold-light); }
+.mic-status { margin: 0; font-size: 14px; color: var(--muted); }
+.mic-status.ok { color: var(--ok); }
+.mic-status.err { color: #ff8a8a; }
+
+/* settings */
+.settings { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 10px 0 2px; border-top: 2px dashed var(--line); }
+.setting { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.setting-label { color: var(--muted); font-size: 14px; }
+.setting-note { font-size: 9px; color: var(--gold-light); }
+.seg { display: inline-flex; box-shadow: 0 0 0 2px var(--line); }
+.seg button {
+  border: 0; background: var(--ink); color: var(--muted); padding: 6px 10px; font-size: 14px;
+}
+.seg button + button { border-left: 2px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--gold); color: #3a2500; }
+.toggle { border: 0; background: var(--ink); color: var(--muted); padding: 6px 10px; box-shadow: 0 0 0 2px var(--line); font-size: 14px; }
+.toggle[aria-pressed="true"] { color: var(--text); }
+input[type="range"] { accent-color: var(--gold); width: 160px; }
+
+/* high scores (localStorage) */
+.hiscores {
+  width: 100%;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  padding: 8px 12px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  text-align: left;
+}
+.hiscores-title { font-family: var(--display); font-size: 9px; letter-spacing: .1em; color: var(--gold-light); }
+.hiscores-empty { margin: 0; font-size: 14px; color: var(--muted); }
+.hiscores-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hiscores-list li { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; font-size: 15px; }
+.hiscores-list .rank { font-size: 9px; color: var(--muted); }
+.hiscores-list .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hiscores-list .score { font-size: 10px; color: var(--text); }
+.hiscores-list .floors { font-size: 8px; color: var(--muted); }
+.hiscores-list li:first-child .rank, .hiscores-list li:first-child .score { color: var(--gold); }
+.run-record { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.best-line { font-family: var(--display); font-size: 10px; color: var(--gold-light); display: flex; gap: 10px; align-items: center; }
+.new-best { font-size: 9px; color: #3a2500; background: var(--gold); padding: 3px 6px; animation: combopop .3s ease-out; }
+.name-row { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+.name-input {
+  font: inherit; font-size: 16px; width: 12ch; padding: 4px 8px;
+  background: var(--ink); color: var(--text); border: 0;
+  box-shadow: 0 0 0 2px var(--line); text-align: center;
+}
+.name-input:focus { outline: none; box-shadow: 0 0 0 2px var(--gold); }
+
+/* stars */
+.stars { display: inline-flex; gap: 4px; font-size: 20px; line-height: 1; }
+.stars .on { color: var(--gold); text-shadow: 0 0 8px rgba(255, 204, 51, .6); }
+.stars .off { color: #2d3470; }
+.stars.small { font-size: 13px; gap: 2px; }
+.stars-row { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+.stars-row .stars { animation: combopop .4s ease-out; }
+
+/* result card */
+.result-title { font-family: var(--display); font-size: clamp(18px, 4vmin, 30px); letter-spacing: .12em; text-shadow: 3px 3px 0 var(--ink); }
+.result-title.win { color: var(--gold); text-shadow: 3px 3px 0 var(--gold-dark), 6px 6px 0 var(--ink); }
+.result-title.lose { color: #ff8a8a; }
+.result-art { display: flex; gap: 10px; justify-content: center; }
+.loot-name { color: var(--gold-light); font-size: 17px; }
+.loot-flavor { color: var(--muted); font-size: 14px; margin: 0; }
+.loot-effect { margin: 0; font-size: 14px; color: var(--ok); background: var(--ink); box-shadow: 0 0 0 2px var(--line); padding: 6px 12px; }
+.score-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.score-box {
+  background: var(--ink); box-shadow: 0 0 0 2px var(--line);
+  padding: 8px 12px; min-width: 96px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.score-box span { font-size: 12px; color: var(--muted); }
+.score-box b { font-family: var(--display); font-size: 12px; color: var(--text); font-weight: 400; }
+.score-box.total b { color: var(--gold); }
+.result-text { margin: 0; color: var(--muted); max-width: 40ch; }
+
+/* start screen */
+.card-start { background: rgba(21, 27, 75, .78); gap: 16px; padding-top: 28px; }
+.start-art canvas { image-rendering: pixelated; }
+.btn-start { font-size: 16px; padding: 18px 46px; letter-spacing: .16em; animation: startpulse 1.6s ease-in-out infinite; }
+@keyframes startpulse { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.start-hint { margin: 0; color: var(--muted); font-size: 14px; }
+.start-best { font-size: 9px; color: var(--gold-light); }
+.start-row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+html[lang="zh-CN"] .btn-start { font-size: 20px; }
+
+/* wand tuning */
+.card-tune { gap: 14px; }
+.tune-step.low { color: var(--frost); }
+.tune-step.high { color: var(--thunder); }
+.tune-notes { display: flex; gap: 10px; }
+.tune-chip { font-size: 10px; padding: 6px 10px; background: var(--ink); color: var(--muted); box-shadow: 0 0 0 2px var(--line); }
+.tune-chip.set { color: var(--gold-light); box-shadow: 0 0 0 2px var(--gold); }
+.tune-text { margin: 0; font-size: 18px; max-width: 34ch; color: var(--text); }
+.tune-note { font-size: 24px; color: var(--gold-light); min-height: 1.2em; }
+.tune-bar { width: min(320px, 100%); height: 14px; background: var(--ink); box-shadow: 0 0 0 2px var(--line); }
+.tune-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--frost), var(--ok), var(--thunder)); transition: width .08s linear; }
+.tune-msg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); }
+.tune-msg.ok { color: var(--ok); }
+.tune-msg.warn { color: var(--thunder); }
+
+/* tower map */
+.card-map { gap: 14px; }
+.map { position: relative; width: min(420px, 100%); display: flex; flex-direction: column; gap: 6px; padding-left: 52px; }
+.map-row {
+  display: grid; grid-template-columns: auto 44px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  height: 52px; padding: 4px 10px;
+  background: var(--ink); box-shadow: 0 0 0 2px var(--line);
+  text-align: left;
+}
+.map-row.current { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(255, 204, 51, .35); }
+.map-row.locked { opacity: .55; }
+.map-row .map-no { font-family: var(--display); font-size: 9px; color: var(--muted); width: 3.5ch; }
+.map-row.current .map-no { color: var(--gold); }
+.map-row .map-name { font-size: 15px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-row .map-name small { display: block; font-size: 12px; line-height: 1.15; color: var(--muted); white-space: normal; }
+.map-row canvas { display: block; }
+.map-wizard { position: absolute; left: 0; width: 48px; height: 48px; transition: top .8s cubic-bezier(.3, 1.4, .5, 1); }
+.map-wizard canvas { display: block; }
+@media (prefers-reduced-motion: reduce) { .map-wizard { transition: none; } }
+
+/* ---------- Pitch dashboard ---------- */
+.hud-bottom { border-bottom: 0; padding-top: 6px; }
+.dash-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.dash-title { font-family: var(--display); font-size: 9px; color: var(--gold-light); letter-spacing: .08em; }
+.dash-sub { font-size: 8px; color: var(--muted); }
+.dash-body { display: flex; gap: 12px; align-items: stretch; }
+
+.slots {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  padding: 4px;
+}
+.trace { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); pointer-events: none; z-index: 2; }
+.slot {
+  position: relative;
+  border: 0;
+  background: var(--panel);
+  color: var(--muted);
+  padding: 8px 4px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  min-height: 64px;
+  transform: none; /* the active/fired states must never move or resize the slot */
+}
+.slot-icon { font-size: 18px; line-height: 1; filter: grayscale(.4); }
+.slot-name { font-family: var(--display); font-size: 8px; color: var(--text); letter-spacing: .04em; }
+html[lang="zh-CN"] .slot-name { font-size: 11px; }
+.slot-range { font-family: var(--display); font-size: 7px; color: var(--muted); }
+.slot-charge { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(0, 0, 0, .35); }
+.slot-charge i { display: block; height: 100%; width: 0%; background: var(--c, var(--gold)); }
+.slot.active {
+  background: color-mix(in srgb, var(--c) 28%, var(--panel));
+  box-shadow: inset 0 0 0 2px var(--c), 0 0 10px color-mix(in srgb, var(--c) 50%, transparent);
+  color: var(--text);
+}
+.slot.active .slot-icon { filter: none; }
+.slot.weak::before {
+  content: "";
+  position: absolute; top: 4px; right: 4px;
+  width: 6px; height: 6px;
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+.slot.target::after {
+  content: "";
+  position: absolute; top: 4px; left: 4px;
+  width: 6px; height: 6px;
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
+}
+.slot.fired { animation: fired .18s ease-out; }
+@keyframes fired { 0% { filter: brightness(1.7); } 100% { filter: brightness(1); } }
+
+.readout {
+  flex: 0 0 auto;
+  width: 118px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--line);
+  padding: 8px 10px;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  text-align: center;
+}
+.read-note { font-size: 16px; line-height: 20px; height: 20px; overflow: hidden; color: var(--gold-light); }
+.read-hz { font-size: 8px; line-height: 12px; height: 12px; overflow: hidden; color: var(--muted); }
+.read-hint {
+  font-size: 13px; color: var(--muted);
+  /* reserve two lines so a longer hint never reflows the dashboard */
+  line-height: 1.25; height: 34px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.read-hint.ok { color: var(--ok); }
+.read-hint.warn { color: var(--thunder); }
+.read-hint.danger { color: #ff8a8a; }
+
+.power { flex: 0 0 auto; display: flex; gap: 8px; align-items: stretch; }
+.power-label { font-family: var(--display); font-size: 7px; line-height: 1.6; color: var(--muted); align-self: center; text-align: right; }
+.vmeter { width: 22px; position: relative; background: var(--ink); box-shadow: 0 0 0 2px var(--line); overflow: hidden; }
+.vfill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: linear-gradient(0deg, var(--frost), var(--ok) 60%, var(--thunder)); transition: height .05s linear; }
+.vfill.hot { filter: brightness(1.2); }
+.vthresh { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px) {
+  .hud-top { flex-wrap: wrap; gap: 8px; padding: 6px 10px; }
+  .badge-level .lvname { display: none; }
+  .meter { flex: 1 1 120px; }
+  .score { margin-left: 0; flex: 1 1 100%; text-align: left; display: flex; gap: 10px; align-items: baseline; }
+  .readout { width: 96px; padding: 6px; }
+  .slot-range { display: none; }
+  .slot { min-height: 54px; }
+  .card { padding: 16px 14px 18px; }
+  .settings .setting { gap: 8px; }
+  .map { padding-left: 44px; }
+}
+@media (max-width: 480px) {
+  .slot-name { display: none; }
+  .slot { min-height: 48px; padding: 6px 2px 8px; }
+  .slot-icon { font-size: 22px; }
+  .dash-sub { display: none; }
+  .dash-title { font-size: 8px; }
+  .power-label { display: none; }
+  .hud { padding: 6px 8px; }
+  .hearts canvas { width: 18px; height: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-start { animation: none; }
+  .intro-boss, .banner, .combo, .slot.fired, .badge-weak.pulse, .action.attack, .action.shake, .hearts canvas.lost, .stars-row .stars { animation: none; }
+  .bar .fill, .vfill, .tune-bar i { transition: none; }
+}
+
+</style>
+</head>
+<body>
+<div id="app" class="app" data-screen="title">
+
+  <!-- ===== Top HUD ===== -->
+  <header class="hud hud-top" id="hudTop">
+    <div class="badge badge-level">
+      <span class="lv num" id="hudFloor">FLOOR 1 / 5</span>
+      <span class="lvname" id="hudFloorName">Mossy Cellar</span>
+    </div>
+    <div class="hearts" id="hearts" aria-label="Hearts"></div>
+    <div class="meter meter-time">
+      <div class="meter-head"><span data-i18n="time">Time</span><span class="num" id="hudTimeVal">45s</span></div>
+      <div class="bar bar-time"><div class="fill" id="hudTimeFill"></div></div>
+    </div>
+    <div class="meter meter-hp">
+      <div class="meter-head"><span id="hudBossName">Bog Slime</span><span class="num" id="hudBossHp">100</span></div>
+      <div class="bar bar-hp"><div class="fill" id="hudBossFill"></div></div>
+    </div>
+    <div class="badge badge-weak" id="hudWeak">
+      <span class="weak-label" data-i18n="weakTo">WEAK TO</span>
+      <span class="weak-spell" id="hudWeakSpell">⚡ Thunder</span>
+    </div>
+    <div class="score">
+      <span class="score-label" data-i18n="score">SCORE</span>
+      <span class="num" id="hudScore">0</span>
+    </div>
+  </header>
+
+  <!-- ===== Scene ===== -->
+  <main class="stage" id="stage">
+    <div class="scene-wrap" id="sceneWrap">
+      <canvas id="scene" width="480" height="270" aria-label="Battle scene"></canvas>
+      <div class="scene-layer" id="sceneLayer">
+        <div class="hitflash" id="hitFlash" hidden></div>
+        <div class="banner" id="banner" hidden></div>
+        <div class="combo num" id="combo" hidden></div>
+        <div class="bubble" id="bossBubble" hidden></div>
+        <div class="action" id="bossAction" hidden></div>
+      </div>
+    </div>
+
+    <!-- Start screen -->
+    <section class="overlay" id="ovStart">
+      <div class="card card-start">
+        <div class="start-art" id="startArt"></div>
+        <h1 class="game-title" data-i18n="title">VOX TOWER</h1>
+        <p class="tagline" data-i18n="tagline">Sing to cast spells. Climb the tower. Cleanse every floor.</p>
+        <button class="btn btn-gold btn-big btn-start" id="btnPlay" type="button" data-i18n="pressStart">START</button>
+        <p class="start-hint" id="startHint">Press Start, then tune your wand by singing two notes.</p>
+        <div class="start-best num" id="startBest" hidden></div>
+        <div class="row start-row">
+          <div class="seg seg-lang">
+            <button type="button" data-lang="en">EN</button>
+            <button type="button" data-lang="zh">中文</button>
+          </div>
+          <button class="btn btn-line" id="btnSettings" type="button" data-i18n="settings">Settings &amp; scores</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Title -->
+    <section class="overlay" id="ovTitle">
+      <div class="card card-title">
+        <div class="title-art" id="titleArt"></div>
+        <h1 class="game-title" data-i18n="title">VOX TOWER</h1>
+        <p class="tagline" data-i18n="tagline">Sing to cast spells. Climb the tower. Cleanse every floor.</p>
+
+        <section class="hiscores" id="hiscores" aria-live="polite"></section>
+
+        <div class="mic-box" id="micBox">
+          <div class="row">
+            <button class="btn btn-line" id="btnMic" type="button" data-i18n="enableMic">Enable microphone</button>
+            <button class="btn btn-line" id="btnTune" type="button" data-i18n="tuneBtn">Tune your wand</button>
+          </div>
+          <div class="mic-live" id="micLive" hidden>
+            <div class="mic-meter"><div class="mic-fill" id="micFill"></div><div class="mic-thresh" id="micThresh"></div></div>
+            <div class="mic-note num" id="micNote">—</div>
+          </div>
+          <p class="mic-status" id="micStatus" data-i18n="micIdle">Allow the microphone, then hum to test it.</p>
+        </div>
+
+        <div class="settings">
+          <div class="setting">
+            <span class="setting-label" data-i18n="voiceRange">Voice range</span>
+            <div class="seg" id="segRange">
+              <button type="button" data-range="kid" data-i18n="rangeKid">Kid</button>
+              <button type="button" data-range="adult" data-i18n="rangeAdult">Grown-up</button>
+              <button type="button" data-range="wide" data-i18n="rangeWide">Wide</button>
+              <button type="button" data-range="custom" data-i18n="rangeCustom" id="rangeCustom" hidden>Tuned</button>
+            </div>
+            <span class="setting-note num" id="rangeNote">E3 – G#6</span>
+          </div>
+          <div class="setting">
+            <label class="setting-label" for="thresh" data-i18n="sensitivity">Mic sensitivity</label>
+            <input type="range" id="thresh" min="0.1" max="0.8" step="0.01" value="0.35">
+          </div>
+          <div class="setting setting-row">
+            <div class="seg seg-lang" id="segLang">
+              <button type="button" data-lang="en">EN</button>
+              <button type="button" data-lang="zh">中文</button>
+            </div>
+            <button type="button" class="toggle" id="btnSfx" aria-pressed="true"><span data-i18n="sound">Sound</span> <span id="sfxState">ON</span></button>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-line" id="btnBack" type="button" data-i18n="back">Back</button>
+          <button class="btn btn-gold btn-big" id="btnStart" type="button" data-i18n="startClimb">Start climbing</button>
+        </div>
+        <p class="fineprint" data-i18n="noMic">No microphone? Hold keys 1–5 or press and hold a spell slot.</p>
+      </div>
+    </section>
+
+    <!-- Wand tuning -->
+    <section class="overlay" id="ovTune" hidden>
+      <div class="card card-tune">
+        <h2 class="floor-name" data-i18n="tuneTitle">TUNE YOUR WAND</h2>
+        <div class="eyebrow num tune-step" id="tuneStep">1 / 2</div>
+        <div class="tune-notes">
+          <span class="tune-chip num" id="tuneLo">LOW —</span>
+          <span class="tune-chip num" id="tuneHi">HIGH —</span>
+        </div>
+        <p class="tune-text" id="tuneText"></p>
+        <div class="tune-note num" id="tuneNote">—</div>
+        <div class="tune-bar"><i id="tuneFill"></i></div>
+        <p class="tune-msg" id="tuneMsg"></p>
+        <div class="row">
+          <button class="btn btn-line" id="btnTuneCancel" type="button" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-line" id="btnTuneSkip" type="button" data-i18n="tuneSkip" hidden>Skip tuning</button>
+          <button class="btn btn-line" id="btnTuneRedo" type="button" data-i18n="tuneRedo" hidden>Redo lowest</button>
+          <button class="btn btn-gold" id="btnTuneNext" type="button" data-i18n="tuneNext" hidden>Next: highest note</button>
+          <button class="btn btn-gold" id="btnTuneRetry" type="button" data-i18n="tryAgain" hidden>Try again</button>
+          <button class="btn btn-gold" id="btnTuneDone" type="button" data-i18n="tuneDoneBtn" hidden>Done</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tower map -->
+    <section class="overlay" id="ovMap" hidden>
+      <div class="card card-map">
+        <h2 class="floor-name" data-i18n="mapTitle">TOWER MAP</h2>
+        <div class="map" id="mapRows"></div>
+        <div class="row" id="mapButtons"></div>
+      </div>
+    </section>
+
+    <!-- Floor intro -->
+    <section class="overlay" id="ovIntro" hidden>
+      <div class="card card-intro">
+        <div class="eyebrow num" id="introFloor">── FLOOR 1 / 5 ──</div>
+        <h2 class="floor-name" id="introName">Mossy Cellar</h2>
+        <div class="intro-boss" id="introBoss"></div>
+        <div class="taunt" id="introTaunt">…</div>
+        <div class="intro-hints num" id="introHints"></div>
+        <button class="btn btn-gold btn-big" id="btnBegin" type="button" data-i18n="begin">Start!</button>
+      </div>
+    </section>
+
+    <!-- Result (victory / defeat / final) -->
+    <section class="overlay" id="ovResult" hidden>
+      <div class="card card-result" id="resultCard"></div>
+    </section>
+  </main>
+
+  <!-- ===== Pitch dashboard ===== -->
+  <footer class="hud hud-bottom" id="hudBottom">
+    <div class="dash-head">
+      <span class="dash-title" data-i18n="dashTitle">LIVE PITCH DASHBOARD</span>
+      <span class="dash-sub num" id="dashRange">log scale · E3 – G#6</span>
+    </div>
+    <div class="dash-body">
+      <div class="slots" id="slots">
+        <canvas class="trace" id="trace" aria-hidden="true"></canvas>
+      </div>
+      <div class="readout">
+        <div class="read-note num" id="readNote">—</div>
+        <div class="read-hz num" id="readHz">0 Hz</div>
+        <div class="read-hint" id="readHint">…</div>
+      </div>
+      <div class="power">
+        <div class="power-label" data-i18n="chantPower">CHANT<br>POWER</div>
+        <div class="vmeter" id="vmeter">
+          <div class="vfill" id="volFill"></div>
+          <div class="vthresh" id="volThresh"></div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* Vox Tower — microphone pitch tracker
+ * Plain script (no modules) so the game also runs from file://.
+ * Exposes window.VoxPitch.
+ *
+ * Algorithm: McLeod Pitch Method (normalized square difference function)
+ * over a time-domain buffer from an AnalyserNode, with parabolic peak
+ * interpolation and a short median filter to steady the reading.
+ */
+(function () {
+  'use strict';
+
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+  function hzToMidi(hz) {
+    return 69 + 12 * Math.log2(hz / 440);
+  }
+  function midiToHz(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+  function midiToName(midi) {
+    const m = Math.round(midi);
+    return NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+  }
+  function noteNameToMidi(name) {
+    const m = /^([A-G])(#?)(-?\d+)$/.exec(name);
+    if (!m) return NaN;
+    const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]];
+    return (parseInt(m[3], 10) + 1) * 12 + base + (m[2] ? 1 : 0);
+  }
+
+  class PitchTracker {
+    constructor(opts) {
+      opts = opts || {};
+      this.fftSize = opts.fftSize || 4096;
+      this.minHz = opts.minHz || 55;     // lowest pitch we bother to look for
+      this.maxHz = opts.maxHz || 2200;   // highest
+      this.clarityMin = opts.clarityMin || 0.86;
+      this.medianLen = opts.medianLen || 5;
+      this.ctx = null;
+      this.analyser = null;
+      this.stream = null;
+      this.buf = null;
+      this.history = [];
+      this.running = false;
+      this.lastResult = { hz: 0, midi: 0, note: '', rms: 0, level: 0, clarity: 0, voiced: false };
+    }
+
+    async start() {
+      if (this.running) return true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('no-getusermedia');
+      }
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: false,
+      });
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      if (this.ctx.state === 'suspended') await this.ctx.resume();
+      const src = this.ctx.createMediaStreamSource(this.stream);
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = this.fftSize;
+      this.analyser.smoothingTimeConstant = 0;
+      src.connect(this.analyser);
+      this.buf = new Float32Array(this.analyser.fftSize);
+      this.running = true;
+      return true;
+    }
+
+    stop() {
+      if (this.stream) this.stream.getTracks().forEach((t) => t.stop());
+      if (this.ctx) this.ctx.close();
+      this.stream = null; this.ctx = null; this.analyser = null;
+      this.running = false;
+    }
+
+    /** Pull one reading. Call from the animation loop. */
+    update() {
+      if (!this.running) return this.lastResult;
+      const buf = this.buf;
+      this.analyser.getFloatTimeDomainData(buf);
+      const sr = this.ctx.sampleRate;
+
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      // Perceptual-ish level: -60 dBFS -> 0, -10 dBFS -> 1
+      const db = 20 * Math.log10(rms + 1e-9);
+      const level = Math.max(0, Math.min(1, (db + 60) / 50));
+
+      let hz = 0, clarity = 0;
+      if (rms > 0.003) {
+        const r = this._mpm(buf, sr);
+        hz = r.hz; clarity = r.clarity;
+      }
+
+      let voiced = hz > 0 && clarity >= this.clarityMin && hz >= this.minHz && hz <= this.maxHz;
+      if (voiced) {
+        this.history.push(hz);
+        if (this.history.length > this.medianLen) this.history.shift();
+      } else {
+        this.history.length = 0;
+      }
+      let smooth = 0;
+      if (this.history.length >= 2) {
+        const s = this.history.slice().sort((a, b) => a - b);
+        smooth = s[Math.floor(s.length / 2)];
+      } else {
+        voiced = false;
+      }
+      const midi = smooth > 0 ? hzToMidi(smooth) : 0;
+      this.lastResult = {
+        hz: smooth,
+        midi,
+        note: smooth > 0 ? midiToName(midi) : '',
+        rms, level, clarity, voiced,
+      };
+      return this.lastResult;
+    }
+
+    /** McLeod pitch method over lags [minLag, maxLag]. */
+    _mpm(buf, sr) {
+      const maxLag = Math.min(Math.floor(sr / this.minHz), buf.length >> 1);
+      const minLag = Math.max(2, Math.floor(sr / this.maxHz));
+      const W = buf.length - maxLag; // window we correlate over
+      const nsdf = this._nsdf || (this._nsdf = new Float32Array(buf.length));
+
+      // running sums of squares for normalisation
+      let e0 = 0;
+      for (let j = 0; j < W; j++) e0 += buf[j] * buf[j];
+
+      for (let tau = minLag; tau <= maxLag; tau++) {
+        let acf = 0, e1 = 0;
+        for (let j = 0; j < W; j++) {
+          const b = buf[j + tau];
+          acf += buf[j] * b;
+          e1 += b * b;
+        }
+        const m = e0 + e1;
+        nsdf[tau] = m > 0 ? (2 * acf) / m : 0;
+      }
+
+      // key-maxima picking
+      let maxVal = 0;
+      const peaks = [];
+      let tau = minLag;
+      // skip until first negative-going zero crossing
+      while (tau <= maxLag && nsdf[tau] > 0) tau++;
+      while (tau <= maxLag) {
+        // wait for positive-going crossing
+        while (tau <= maxLag && nsdf[tau] <= 0) tau++;
+        let best = -1, bestTau = -1;
+        while (tau <= maxLag && nsdf[tau] > 0) {
+          if (nsdf[tau] > best) { best = nsdf[tau]; bestTau = tau; }
+          tau++;
+        }
+        if (bestTau > 0) {
+          peaks.push([bestTau, best]);
+          if (best > maxVal) maxVal = best;
+        }
+      }
+      if (!peaks.length || maxVal <= 0) return { hz: 0, clarity: 0 };
+
+      const thresh = 0.9 * maxVal;
+      let pick = null;
+      for (const p of peaks) { if (p[1] >= thresh) { pick = p; break; } }
+      let t = pick[0];
+      // parabolic interpolation
+      if (t > minLag && t < maxLag) {
+        const a = nsdf[t - 1], b = nsdf[t], c = nsdf[t + 1];
+        const denom = a - 2 * b + c;
+        if (denom !== 0) t = t + 0.5 * (a - c) / denom;
+      }
+      return { hz: sr / t, clarity: pick[1] };
+    }
+  }
+
+  window.VoxPitch = { PitchTracker, hzToMidi, midiToHz, midiToName, noteNameToMidi, NOTE_NAMES };
+})();
+
+/* Vox Tower — UI strings (English + 中文). Exposes window.VoxI18N. */
+(function () {
+  'use strict';
+
+  const en = {
+    title: 'VOX TOWER',
+    tagline: 'Sing to cast spells. Climb the tower. Cleanse every floor.',
+    enableMic: 'Enable microphone',
+    micIdle: 'Allow the microphone, then hum to test it.',
+    micOk: 'Microphone on — hum or sing to test it!',
+    micErr: 'Microphone unavailable. You can still play with keys 1–5.',
+    micBusy: 'Asking for the microphone…',
+    voiceRange: 'Voice range',
+    rangeKid: 'Kid',
+    rangeAdult: 'Grown-up',
+    rangeWide: 'Wide',
+    rangeCustom: 'Tuned',
+    sensitivity: 'Mic sensitivity',
+    sound: 'Sound',
+    on: 'ON',
+    off: 'OFF',
+    startClimb: 'Start climbing',
+    pressStart: 'START',
+    startHint: 'Press Start, then tune your wand by singing two notes.',
+    startHintTuned: 'Wand tuned to {lo} \u2013 {hi}. Retune it under Settings & scores.',
+    startBest: 'BEST {n} \u00b7 {name}',
+    settings: 'Settings & scores',
+    back: 'Back',
+    tuneSkip: 'Skip tuning',
+    noMic: 'No microphone? Hold keys 1–5 or press and hold a spell slot.',
+    begin: 'Start!',
+    climbOn: 'Climb on',
+    tryAgain: 'Try again',
+    playAgain: 'Play again',
+    floor: 'FLOOR {n} / {total}',
+    floorEyebrow: '── FLOOR {n} / {total} ──',
+    floorBonus: 'ROOF · BONUS',
+    floorEyebrowBonus: '── BONUS FLOOR ──',
+    time: 'Time',
+    weakTo: 'WEAK TO',
+    score: 'SCORE',
+    hearts: 'Hearts',
+    dashTitle: 'LIVE PITCH DASHBOARD',
+    dashRange: 'log scale · {lo} – {hi}',
+    chantPower: 'CHANT<br>POWER',
+    hintQuiet: 'Sing louder',
+    hintLow: 'Too low — go higher',
+    hintHigh: 'Too high — go lower',
+    hintReady: 'Listening…',
+    hintCharging: 'Casting {spell}',
+    hintSim: 'Key {n}: {spell}',
+    hintTimeLimit: 'Time limit <b>{n}s</b> · Hearts <b>{h}</b>',
+    hintWeak: 'Weak to <b>{spell}</b> — it changes once, watch its colour!',
+    hintTip: 'Voice tip: {tip}',
+    hintBlock: 'Red icon = attack: sing that spell to block it',
+    hintRune: 'Gold runes: sing the icons in order for a big hit',
+    banPurify: 'PURIFICATION BEGINS!',
+    banWeakChange: 'WEAKNESS CHANGED → {spell}',
+    banTimeUp: "TIME'S UP!",
+    banHearts: 'OUT OF HEARTS!',
+    block: 'BLOCK!',
+    blocked: 'BLOCKED!',
+    runeSing: 'SING',
+    runeBreak: 'RUNE BREAK!',
+    combo: 'x{n} COMBO',
+    win: 'PURIFIED!',
+    lose: "TIME'S UP!",
+    loseHearts: 'WORN OUT!',
+    loseText: 'The {boss} is still here. Catch your breath and try again.',
+    loseHeartsText: 'The wizard needs a rest. The {boss} wins this round — try again with full hearts.',
+    loot: 'Loot · {name}',
+    effect: 'Effect · {text}',
+    stars: 'Stars',
+    timeBonus: 'Time bonus',
+    perfectBonus: 'Perfect bonus',
+    floorScore: 'Floor score',
+    total: 'Total',
+    finalTitle: 'TOWER CLEANSED!',
+    finalText: 'Every floor is quiet. The stars are singing back.',
+    finalScore: 'Final score',
+    highScores: 'HIGH SCORES · THIS DEVICE',
+    noScores: 'No scores yet. Be the first to sing!',
+    best: 'BEST {n}',
+    newBest: 'NEW BEST!',
+    rankLabel: '#{n} on this device',
+    nameLabel: 'Name',
+    namePlaceholder: 'Your name',
+    floorsCleared: '{n}/5 floors',
+    floorsAll: '5/5 + roof ★',
+    tuneBtn: 'Tune your wand',
+    tuneTitle: 'TUNE YOUR WAND',
+    tuneLow: 'Sing your LOWEST comfortable note and hold it…',
+    tuneHigh: 'Now sing your HIGHEST comfortable note and hold it…',
+    tuneHold: 'Keep holding…',
+    tuneBreath: 'Take a breath… then sing',
+    tuneStepLow: 'LOWEST NOTE',
+    tuneStepHigh: 'HIGHEST NOTE',
+    tuneGotLow: 'Got it! Lowest note: {n}',
+    tuneNextHint: 'Happy with it? Press Next, then sing your highest note.',
+    tuneRedo: 'Redo lowest',
+    tuneNext: 'Next: highest note',
+    tuneDone: 'Tuned! Your spells now span {lo} – {hi}.',
+    tuneNarrow: 'Too narrow: {lo} to {hi} is only {n} semitones, and the wand needs at least {min}.',
+    tuneNarrowHint: 'Try again: start lower, then finish higher.',
+    low: 'LOW',
+    high: 'HIGH',
+    tuneNoMic: 'Turn on the microphone first.',
+    tuneDoneBtn: 'Done',
+    cancel: 'Cancel',
+    mapTitle: 'TOWER MAP',
+    enterFloor: 'Enter floor {n}',
+    enterBonus: 'Climb to the roof',
+    finishHere: 'Finish here',
+    locked: 'Locked — win the Crest',
+    unknown: '???',
+    hurt: ['Ouch!', 'Hey!', 'Stop that!', 'Too bright!', 'Nooo!'],
+    idle: ['Is that all?', 'Hah, missed me!', 'Louder, little wizard!', 'Yawn.', 'My ears!'],
+    spells: ['Flame', 'Frost', 'Thunder', 'Gale', 'Light'],
+    effects: {
+      tonic: 'Refills one heart at the start of every floor',
+      wand: 'Spells charge 20% faster',
+      needle: 'Block windows last longer',
+      ring: '+8 seconds on every floor',
+      crest: 'The roof opens — a bonus floor awaits!',
+      chest: 'You sang the whole tower!',
+    },
+    floors: [
+      {
+        name: 'Mossy Cellar', boss: 'Bog Slime',
+        taunt: 'Blub! Nobody sings in my cellar. It is far too damp for singing!',
+        taunt2: 'Blub?! I feel… chilly. That is new.',
+        tip: 'Sing "ahh" at your normal talking pitch.',
+        loot: 'Bog Tonic', flavor: 'Tastes like pond water, works like magic.',
+      },
+      {
+        name: 'Bat Belfry', boss: 'Belfry Bat',
+        taunt: 'Screee! Too loud! Who invited a singer up here?',
+        taunt2: 'My ears! Fine — try THUNDER now!',
+        tip: 'Hum a little lower than your talking voice.',
+        loot: 'Echo Wand', flavor: 'It hums back whatever you hum to it.',
+      },
+      {
+        name: 'Cobweb Stairwell', boss: 'Cellar Spider',
+        taunt: 'Eight legs, zero patience. Get off my web!',
+        taunt2: 'Silk armour, activate! Ice cannot… oh.',
+        tip: 'Go higher, like calling to someone far away.',
+        loot: 'Cobweb Needle', flavor: 'Sews socks. Also sews up spider egos.',
+      },
+      {
+        name: 'Frozen Gallery', boss: 'Frost Ghost',
+        taunt: 'Boooo… who turned the heating off? Oh right. Me.',
+        taunt2: 'Too warm! Turn on the… light? Nooo.',
+        tip: 'Hum low and warm, like a sleepy bear.',
+        loot: 'Frost Ring', flavor: 'Wear it and your fingertips chime like wind bells.',
+      },
+      {
+        name: 'Tower Crown', boss: 'One-Eyed Warden',
+        taunt: 'One eye is plenty to watch you lose!',
+        taunt2: 'Grr! Enough light! Now I am ANGRY.',
+        tip: 'Squeak as high as you can! When it turns red, drop to your lowest hum.',
+        loot: "Warden's Crest", flavor: 'The tower is quiet now. You can hear the stars.',
+      },
+      {
+        name: 'Starlit Roof', boss: 'Ember Fiend',
+        taunt: 'The stars up here are MINE. You will never sing this high!',
+        taunt2: 'Changing again! Keep up, wizard!',
+        tip: 'It shifts twice. Follow the weakness badge and the ladder.',
+        loot: 'Star Chest', flavor: 'Proof that you sang the whole tower.',
+      },
+    ],
+  };
+
+  const zh = {
+    title: '声之塔',
+    tagline: '唱歌施法，攀登高塔，净化每一层。',
+    enableMic: '开启麦克风',
+    micIdle: '允许使用麦克风，然后哼一句试试。',
+    micOk: '麦克风已开启，哼一句或唱一句试试！',
+    micErr: '麦克风不可用，仍然可以用数字键 1–5 游玩。',
+    micBusy: '正在请求麦克风…',
+    voiceRange: '音域',
+    rangeKid: '儿童',
+    rangeAdult: '成人',
+    rangeWide: '宽音域',
+    rangeCustom: '已调校',
+    sensitivity: '麦克风灵敏度',
+    sound: '音效',
+    on: '开',
+    off: '关',
+    startClimb: '开始登塔',
+    pressStart: '开 始',
+    startHint: '按下开始，唱两个音来调校你的法杖。',
+    startHintTuned: '法杖已调校：{lo} \u2013 {hi}。可在“设置与排行”中重新调校。',
+    startBest: '最佳 {n} \u00b7 {name}',
+    settings: '设置与排行',
+    back: '返回',
+    tuneSkip: '跳过调校',
+    noMic: '没有麦克风？按住数字键 1–5，或按住下方的法术格。',
+    begin: '开 始！',
+    climbOn: '继续登塔',
+    tryAgain: '再试一次',
+    playAgain: '再玩一次',
+    floor: '第 {n} / {total} 关',
+    floorEyebrow: '── 第 {n} / {total} 关 ──',
+    floorBonus: '塔顶 · 隐藏关',
+    floorEyebrowBonus: '── 隐藏关卡 ──',
+    time: '关卡倒计时',
+    weakTo: '弱点',
+    score: '得分',
+    hearts: '生命',
+    dashTitle: '实时音高仪表盘',
+    dashRange: '对数刻度 · {lo} – {hi}',
+    chantPower: '咏唱<br>音力',
+    hintQuiet: '再大声一点',
+    hintLow: '太低了，唱高一点',
+    hintHigh: '太高了，唱低一点',
+    hintReady: '正在聆听…',
+    hintCharging: '正在咏唱{spell}',
+    hintSim: '按键 {n}：{spell}',
+    hintTimeLimit: '本关限时 <b>{n}s</b> · 生命 <b>{h}</b>',
+    hintWeak: '弱点提示：<b>{spell}</b>，它会变一次颜色，注意看！',
+    hintTip: '发声参考：{tip}',
+    hintBlock: '红色图标＝攻击：唱出那个法术就能格挡',
+    hintRune: '金色符文：按顺序唱出图标，造成重击',
+    banPurify: '净化开始！',
+    banWeakChange: '弱点改变 → {spell}',
+    banTimeUp: '时间到！',
+    banHearts: '生命耗尽！',
+    block: '格挡！',
+    blocked: '格挡成功！',
+    runeSing: '咏唱',
+    runeBreak: '符文破碎！',
+    combo: '连击 x{n}',
+    win: '净化成功！',
+    lose: '时间到！',
+    loseHearts: '累坏了！',
+    loseText: '{boss}还在这里。喘口气，再来一次。',
+    loseHeartsText: '小巫师需要休息。{boss}赢了这一回合，恢复生命再来一次吧。',
+    loot: '获得战利品 · {name}',
+    effect: '效果 · {text}',
+    stars: '星级',
+    timeBonus: '剩余时间奖励',
+    perfectBonus: '完美净化奖励',
+    floorScore: '本关得分',
+    total: '总分',
+    finalTitle: '高塔净化完成！',
+    finalText: '每一层都安静了，星星在跟你合唱。',
+    finalScore: '最终得分',
+    highScores: '最高分榜 · 本机',
+    noScores: '还没有分数，快来唱第一首！',
+    best: '最佳 {n}',
+    newBest: '新纪录！',
+    rankLabel: '本机第 {n} 名',
+    nameLabel: '名字',
+    namePlaceholder: '你的名字',
+    floorsCleared: '{n}/5 关',
+    floorsAll: '5/5 + 塔顶 ★',
+    tuneBtn: '调校法杖',
+    tuneTitle: '调校法杖',
+    tuneLow: '唱出你最低的、舒服的音，并保持住…',
+    tuneHigh: '现在唱出你最高的、舒服的音，并保持住…',
+    tuneHold: '继续保持…',
+    tuneBreath: '先换口气…再开始唱',
+    tuneStepLow: '最低音',
+    tuneStepHigh: '最高音',
+    tuneGotLow: '收到！最低音：{n}',
+    tuneNextHint: '满意的话按“下一步”，然后唱最高音。',
+    tuneRedo: '重唱最低音',
+    tuneNext: '下一步：最高音',
+    tuneDone: '调校完成！你的法术音域是 {lo} – {hi}。',
+    tuneNarrow: '音域太窄：{lo} 到 {hi} 只有 {n} 个半音，法杖至少需要 {min} 个。',
+    tuneNarrowHint: '再试一次：起点更低一些，终点更高一些。',
+    low: '低',
+    high: '高',
+    tuneNoMic: '请先开启麦克风。',
+    tuneDoneBtn: '完成',
+    cancel: '取消',
+    mapTitle: '高塔地图',
+    enterFloor: '进入第 {n} 关',
+    enterBonus: '登上塔顶',
+    finishHere: '到此为止',
+    locked: '未解锁：需要守卫纹章',
+    unknown: '???',
+    hurt: ['哎哟！', '喂！', '别打了！', '好亮！', '不要啊！'],
+    idle: ['就这？', '哈，没打中！', '再大声点，小巫师！', '好困。', '我的耳朵！'],
+    spells: ['烈焰咒', '寒冰咒', '雷霆咒', '疾风咒', '圣光咒'],
+    effects: {
+      tonic: '每关开始时恢复一颗心',
+      wand: '咒语咏唱速度提升 20%',
+      needle: '格挡时间更长',
+      ring: '每关时间 +8 秒',
+      crest: '塔顶开启：隐藏关卡出现！',
+      chest: '你唱完了整座塔！',
+    },
+    floors: [
+      {
+        name: '苔藓地窖', boss: '沼泽史莱姆',
+        taunt: '咕噜！没人在我的地窖里唱歌，这里太潮了！',
+        taunt2: '咕噜？！我怎么…冷飕飕的。',
+        tip: '用平常说话的音高唱"啊——"',
+        loot: '沼泽药水', flavor: '尝起来像池塘水，效果却像魔法。',
+      },
+      {
+        name: '蝙蝠钟楼', boss: '钟楼蝙蝠',
+        taunt: '吱——太吵了！谁把歌手请上来的？',
+        taunt2: '我的耳朵！好啊，现在来雷霆试试！',
+        tip: '比说话的声音低一点地哼唱',
+        loot: '回声魔杖', flavor: '你哼什么，它就哼什么。',
+      },
+      {
+        name: '蛛网楼梯', boss: '地窖蜘蛛',
+        taunt: '八条腿，零耐心。从我的网上下去！',
+        taunt2: '蛛丝盔甲，启动！冰不能…哦。',
+        tip: '唱高一点，像在喊远处的人',
+        loot: '蛛丝银针', flavor: '能缝袜子，也能缝合蜘蛛的自尊。',
+      },
+      {
+        name: '寒骨回廊', boss: '寒霜幽灵',
+        taunt: '呜——谁把暖气关了？哦对，是我。',
+        taunt2: '太暖了！把光…打开？不要啊。',
+        tip: '低低地、暖暖地哼，像一只想睡觉的熊',
+        loot: '冰晶指环', flavor: '戴上它，指尖会响起风铃般的声音。',
+      },
+      {
+        name: '塔顶王座', boss: '独眼守卫',
+        taunt: '一只眼睛就足够看你输了！',
+        taunt2: '吼！别再放光了！我生气了！',
+        tip: '尽量尖尖地叫！等它变红后，换成你最低的哼声',
+        loot: '守卫纹章', flavor: '塔安静了。你能听见星星的声音。',
+      },
+      {
+        name: '星空塔顶', boss: '余烬魔',
+        taunt: '塔顶的星星是我的！你唱不到这么高！',
+        taunt2: '又变了！跟上啊，小巫师！',
+        tip: '它会变两次颜色，跟着弱点徽章和音梯唱',
+        loot: '星辰宝箱', flavor: '证明你唱完了整座塔。',
+      },
+    ],
+  };
+
+  window.VoxI18N = { en, zh };
+})();
+
+/* Vox Tower — sprite sheets, spells, voice ranges and floor data.
+ * Sprites: Kenney "Tiny Dungeon" (16px, 12 columns) and "Pixel Platformer"
+ * (18px, 20 columns), both CC0. Tile index = row * columns + column.
+ * Exposes window.VoxLevels.
+ */
+(function () {
+  'use strict';
+
+  const SHEETS = {
+    td: { src: 'data:image/png;base64,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', tile: 16, cols: 12 },
+    pp: { src: 'data:image/png;base64,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', tile: 18, cols: 20 },
+  };
+
+  const HERO = { sheet: 'td', tile: 84 }; // purple-hat wizard
+  const HEART = { sheet: 'pp', full: 44, empty: 46 };
+
+  // Five spells, one per pitch band, low to high.
+  const SPELLS = [
+    { key: 'flame', icon: '🔥', color: '#ff6b3d' },
+    { key: 'frost', icon: '❄️', color: '#5ee0ff' },
+    { key: 'thunder', icon: '⚡', color: '#ffe14d' },
+    { key: 'gale', icon: '🌪️', color: '#8cff9a' },
+    { key: 'light', icon: '✨', color: '#ffd1f7' },
+  ];
+
+  // Voice range presets as MIDI note numbers; five equal bands in log space.
+  // A tuned ("custom") range replaces these after the wand-tuning step.
+  const RANGES = {
+    kid: { lo: 52, hi: 92 },    // E3 – G#6
+    adult: { lo: 36, hi: 76 },  // C2 – E5
+    wide: { lo: 36, hi: 96 },   // C2 – C7, one octave per spell like the original
+  };
+
+  // Loot ids map to effects in game.js:
+  //   tonic  refills one heart when a floor starts
+  //   wand   spells charge 20% faster
+  //   needle block windows last longer
+  //   ring   +8 seconds on every floor
+  //   crest  unlocks the bonus roof floor
+  //   chest  trophy for finishing the roof
+  const FLOORS = [
+    {
+      id: 'cellar',
+      boss: { sheet: 'td', tile: 108, scale: 3 },
+      hp: 100, time: 45, weak: [2, 1],
+      attackEvery: 7.5, block: 2.4, patternLen: 2,
+      loot: { sheet: 'td', tile: 114, id: 'tonic' },
+      ground: { sheet: 'pp', top: [1, 2], body: [121, 122] },
+      accent: '#5ce27a', sky: ['#06102a', '#12354a'],
+    },
+    {
+      id: 'belfry',
+      boss: { sheet: 'td', tile: 120, scale: 3, fly: true },
+      hp: 120, time: 45, weak: [1, 2],
+      attackEvery: 7, block: 2.3, patternLen: 2,
+      loot: { sheet: 'td', tile: 129, id: 'wand' },
+      ground: { sheet: 'td', top: [36, 37, 38, 39], body: [36, 37] },
+      accent: '#a98cff', sky: ['#0a0a2a', '#2a1a55'],
+    },
+    {
+      id: 'stairwell',
+      boss: { sheet: 'td', tile: 122, scale: 3 },
+      hp: 140, time: 45, weak: [3, 1],
+      attackEvery: 6.5, block: 2.2, patternLen: 3,
+      loot: { sheet: 'td', tile: 103, id: 'needle' },
+      ground: { sheet: 'pp', top: [41, 42], body: [121, 122] },
+      accent: '#c9b48a', sky: ['#0d0b24', '#3a2e4a'],
+    },
+    {
+      id: 'gallery',
+      boss: { sheet: 'td', tile: 121, scale: 3, fly: true },
+      hp: 160, time: 50, weak: [0, 4],
+      attackEvery: 6, block: 2.2, patternLen: 3,
+      loot: { sheet: 'td', tile: 101, id: 'ring' },
+      ground: { sheet: 'pp', top: [81, 82], body: [121, 122] },
+      accent: '#8fe9ff', sky: ['#071233', '#1a3f6e'],
+    },
+    {
+      id: 'crown',
+      boss: { sheet: 'td', tile: 109, scale: 4 },
+      hp: 220, time: 60, weak: [4, 0],
+      attackEvery: 5.5, block: 2.0, patternLen: 3,
+      loot: { sheet: 'td', tile: 29, id: 'crest' },
+      ground: { sheet: 'pp', top: [41, 42], body: [121, 122] },
+      accent: '#ffb347', sky: ['#1a0a1e', '#5a1e2e'],
+    },
+    {
+      id: 'roof', bonus: true,
+      boss: { sheet: 'td', tile: 110, scale: 4 },
+      hp: 260, time: 70, weak: [1, 3, 4],
+      attackEvery: 5, block: 2.0, patternLen: 3,
+      loot: { sheet: 'td', tile: 91, id: 'chest' },
+      ground: { sheet: 'td', top: [36, 37, 38, 39], body: [36, 37] },
+      accent: '#ff5c5c', sky: ['#160408', '#4a1020'],
+    },
+  ];
+
+  window.VoxLevels = { SHEETS, HERO, HEART, SPELLS, RANGES, FLOORS };
+})();
+
+/* Vox Tower — game engine (plain script; runs from file:// or any static server) */
+(function () {
+  'use strict';
+
+  const P = window.VoxPitch, LV = window.VoxLevels, I18N = window.VoxI18N;
+
+  const W = 480, H = 270, GROUND_Y = 222;
+  const FLOORS = LV.FLOORS, NUM_FLOORS = FLOORS.length;
+  const MAIN_FLOORS = FLOORS.filter((f) => !f.bonus).length;
+  const BASE_CHARGE = 0.32;      // seconds of on-pitch singing per cast
+  const CAST_COOLDOWN = 0.10;
+  const DMG_WEAK = 12, DMG_OTHER = 3, RUNE_DMG = 30;
+  const MAX_HEARTS = 3;
+  const TRACE_SECONDS = 1.6;
+  const TUNE_HOLD = 1.2, TUNE_MIN_WIDTH = 10;
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const median = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // ---------- settings (persisted per browser) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('vox.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('vox.' + k, JSON.stringify(v)); } catch (e) { /* private mode etc. */ } },
+  };
+  const settings = {
+    lang: store.get('lang', 'en'),
+    range: store.get('range', 'kid'),
+    customRange: store.get('customRange', null),
+    threshold: store.get('threshold', 0.35),
+    sfx: store.get('sfx', true),
+  };
+  if (!I18N[settings.lang]) settings.lang = 'en';
+  const validCustom = () => !!(settings.customRange && typeof settings.customRange.lo === 'number' && settings.customRange.hi - settings.customRange.lo >= TUNE_MIN_WIDTH);
+  if (settings.range === 'custom' ? !validCustom() : !LV.RANGES[settings.range]) settings.range = 'kid';
+  const bestStars = store.get('stars', {}) || {};
+
+  // ---------- local high scores (this browser only) ----------
+  const MAX_SCORES = 5;
+  const scores = {
+    list: (store.get('scores', []) || []).filter((e) => e && typeof e.score === 'number'),
+    lastName: String(store.get('name', '') || ''),
+    best() { return this.list.length ? this.list[0].score : 0; },
+    record(runId, score, floors) {
+      let e = this.list.find((x) => x.id === runId);
+      if (e) { e.score = Math.max(e.score, score); e.floors = Math.max(e.floors, floors); e.date = Date.now(); }
+      else { e = { id: runId, name: this.lastName, score, floors, date: Date.now() }; this.list.push(e); }
+      this.list.sort((a, b) => b.score - a.score || a.date - b.date);
+      this.list = this.list.slice(0, MAX_SCORES);
+      this.save();
+      const rank = this.list.indexOf(e);
+      return { rank, entry: rank >= 0 ? e : null };
+    },
+    setName(runId, name) {
+      name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 8);
+      this.lastName = name;
+      const e = this.list.find((x) => x.id === runId);
+      if (e) e.name = name;
+      this.save();
+    },
+    save() { store.set('scores', this.list); store.set('name', this.lastName); },
+  };
+
+  // ---------- i18n ----------
+  function t(key, vars) {
+    const dict = I18N[settings.lang] || I18N.en;
+    let s = dict[key] != null ? dict[key] : I18N.en[key];
+    if (s == null) s = key;
+    if (typeof s === 'string' && vars) {
+      for (const k in vars) s = s.split('{' + k + '}').join(String(vars[k]));
+    }
+    return s;
+  }
+  function tf(i, key) {
+    const dict = I18N[settings.lang] || I18N.en;
+    const f = dict.floors && dict.floors[i];
+    return (f && f[key] != null) ? f[key] : (I18N.en.floors[i][key] || '');
+  }
+  const spellName = (i) => (I18N[settings.lang].spells || I18N.en.spells)[i];
+  const spellLabel = (i) => LV.SPELLS[i].icon + ' ' + spellName(i);
+  const effectText = (id) => (t('effects') || {})[id] || I18N.en.effects[id] || '';
+  const floorLabel = (i) => FLOORS[i].bonus ? t('floorBonus') : t('floor', { n: i + 1, total: MAIN_FLOORS });
+  const floorsText = (n) => n > MAIN_FLOORS ? t('floorsAll') : t('floorsCleared', { n });
+
+  // ---------- pitch ranges / bands ----------
+  const range = () => (settings.range === 'custom' && validCustom()) ? settings.customRange : (LV.RANGES[settings.range] || LV.RANGES.kid);
+  function bandBounds(i) {
+    const r = range(); const bw = (r.hi - r.lo) / 5;
+    return { lo: r.lo + bw * i, hi: r.lo + bw * (i + 1) };
+  }
+  const bandRangeLabel = (i) => { const b = bandBounds(i); return P.midiToName(b.lo) + '–' + P.midiToName(b.hi); };
+  /** Band for a pitch, with hysteresis so a wobbly note near an edge keeps its band. */
+  function bandOf(midi, prev) {
+    const r = range(); const bw = (r.hi - r.lo) / 5;
+    const margin = Math.min(0.7, bw * 0.15);
+    if (midi < r.lo - (prev === 0 ? margin : 0)) return { band: -1, pos: 'low' };
+    if (midi >= r.hi + (prev === 4 ? margin : 0)) return { band: -1, pos: 'high' };
+    let b = clamp(Math.floor((midi - r.lo) / bw), 0, 4);
+    if (prev >= 0 && b !== prev) {
+      const lo = r.lo + bw * prev, hi = lo + bw;
+      if (midi >= lo - margin && midi < hi + margin) b = prev;
+    }
+    return { band: b, pos: 'in' };
+  }
+
+  // ---------- assets ----------
+  const images = {};
+  function loadImages() {
+    return Promise.all(Object.keys(LV.SHEETS).map((key) => new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => { images[key] = im; resolve(); };
+      im.onerror = () => reject(new Error('Could not load ' + LV.SHEETS[key].src));
+      im.src = LV.SHEETS[key].src;
+    })));
+  }
+  function drawTile(c, sheetKey, index, x, y, scale) {
+    const s = LV.SHEETS[sheetKey], im = images[sheetKey];
+    if (!im) return;
+    const sx = (index % s.cols) * s.tile, sy = Math.floor(index / s.cols) * s.tile;
+    c.drawImage(im, sx, sy, s.tile, s.tile, x, y, s.tile * scale, s.tile * scale);
+  }
+  const fx = document.createElement('canvas'); fx.width = fx.height = 128;
+  const fxc = fx.getContext('2d');
+  function drawTileTinted(c, sheetKey, index, x, y, scale, color, alpha) {
+    const size = LV.SHEETS[sheetKey].tile * scale;
+    fxc.clearRect(0, 0, fx.width, fx.height);
+    fxc.imageSmoothingEnabled = false;
+    drawTile(fxc, sheetKey, index, 0, 0, scale);
+    fxc.globalCompositeOperation = 'source-atop';
+    fxc.globalAlpha = alpha; fxc.fillStyle = color; fxc.fillRect(0, 0, size, size);
+    fxc.globalCompositeOperation = 'source-over'; fxc.globalAlpha = 1;
+    c.drawImage(fx, 0, 0, size, size, x, y, size, size);
+  }
+  function spriteCanvas(sheetKey, index, scale, tint, tintAlpha, cssSize) {
+    const s = LV.SHEETS[sheetKey] || { tile: 16 };
+    const c = document.createElement('canvas');
+    c.width = c.height = s.tile * scale;
+    const cx = c.getContext('2d');
+    cx.imageSmoothingEnabled = false;
+    if (tint) drawTileTinted(cx, sheetKey, index, 0, 0, scale, tint, tintAlpha == null ? 1 : tintAlpha);
+    else drawTile(cx, sheetKey, index, 0, 0, scale);
+    c.style.width = (cssSize || c.width) + 'px';
+    c.style.height = (cssSize || c.height) + 'px';
+    return c;
+  }
+
+  // ---------- sound effects (tiny synth) ----------
+  const sfx = {
+    ctx: null,
+    init() {
+      if (this.ctx) return;
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; }
+    },
+    tone(f0, f1, dur, type, gain, delay) {
+      const c = this.ctx, t0 = c.currentTime + (delay || 0);
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g).connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+    },
+    noise(dur, gain, delay) {
+      const c = this.ctx, t0 = c.currentTime + (delay || 0);
+      const n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = c.createBufferSource(), g = c.createGain();
+      src.buffer = buf; g.gain.value = gain;
+      src.connect(g).connect(c.destination); src.start(t0);
+    },
+    play(name, band) {
+      if (!settings.sfx || !this.ctx) return;
+      const c = this.ctx; if (c.state === 'suspended') c.resume();
+      switch (name) {
+        case 'cast': this.tone(420 + band * 90, 1500 + band * 220, 0.09, 'triangle', 0.10); break;
+        case 'hit': this.tone(170, 55, 0.12, 'square', 0.08); this.noise(0.06, 0.07); break;
+        case 'hitWeak': this.tone(700, 1400, 0.09, 'sine', 0.10); this.noise(0.09, 0.10); break;
+        case 'ui': this.tone(900, 900, 0.03, 'square', 0.04); break;
+        case 'start': this.tone(330, 660, 0.16, 'triangle', 0.09); this.tone(660, 990, 0.16, 'triangle', 0.07, 0.12); break;
+        case 'phase': this.tone(220, 110, 0.35, 'sawtooth', 0.08); break;
+        case 'warn': this.tone(180, 180, 0.07, 'square', 0.07); this.tone(180, 180, 0.07, 'square', 0.07, 0.12); break;
+        case 'shoot': this.tone(300, 120, 0.18, 'sawtooth', 0.07); break;
+        case 'block': this.tone(1200, 2400, 0.12, 'sine', 0.10); this.noise(0.05, 0.05); break;
+        case 'hurt': this.tone(140, 40, 0.25, 'square', 0.10); this.noise(0.12, 0.10); break;
+        case 'runeOpen': [660, 880].forEach((f, i) => this.tone(f, f, 0.08, 'triangle', 0.06, i * 0.09)); break;
+        case 'runeStep': this.tone(880 + (band || 0) * 120, 880 + (band || 0) * 120, 0.06, 'square', 0.05); break;
+        case 'rune': [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, f * 1.01, 0.18, 'square', 0.07, i * 0.05)); this.noise(0.25, 0.10, 0.2); break;
+        case 'tuneOk': this.tone(880, 1320, 0.12, 'sine', 0.08); break;
+        case 'win': [523, 659, 784, 1046].forEach((f, i) => this.tone(f, f, 0.14, 'square', 0.06, i * 0.11)); break;
+        case 'lose': [392, 330, 262].forEach((f, i) => this.tone(f, f * 0.9, 0.22, 'triangle', 0.07, i * 0.2)); break;
+        case 'final': [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => this.tone(f, f, 0.16, 'square', 0.06, i * 0.1)); break;
+        default: break;
+      }
+    },
+  };
+
+  // ---------- scene state ----------
+  const stars = [];
+  for (let i = 0; i < 120; i++) {
+    stars.push({ x: Math.floor(rand(0, W)), y: Math.floor(rand(0, GROUND_Y - 24)), s: Math.random() < 0.14 ? 2 : 1, a: rand(0.35, 1), tw: rand(0.8, 3.2), ph: rand(0, Math.PI * 2) });
+  }
+  const hero = { x: 72, cast: 0, castBand: -1, hurt: 0, shield: 0 };
+  const boss = { x: 392, hp: 100, maxHp: 100, flash: 0, hurt: 0, hop: 0, phase: 0, dead: 0, faded: 0, tint: null, action: null, next: 6, lastAttack: -1 };
+  let projectiles = [], enemyShots = [], particles = [], popups = [];
+  let shake = 0, timeNow = 0;
+
+  const G = {
+    screen: 'title', floor: 0, timeLeft: 0, floorTime: 45, score: 0, floorScore: 0, damageScore: 0,
+    wrongCasts: 0, combo: 0, bestCombo: 0, charge: [0, 0, 0, 0, 0], cooldown: 0, weak: 2, loots: [],
+    lastBand: -1, runId: '', floorsCleared: 0, hearts: MAX_HEARTS, heartsLostFloor: 0, stars: {},
+    actionsDone: 0, resultKind: '', result: null, loseReason: 'time', mapTarget: 0, mapFrom: -1,
+    graceBand: -1, graceUntil: 0, // a note held briefly after a block or rune step is not a wrong spell
+  };
+  const hasLoot = (id) => G.loots.some((l) => l.id === id);
+  const chargeTime = () => BASE_CHARGE * (hasLoot('wand') ? 0.8 : 1);
+  const blockWindow = (F) => F.block + (hasLoot('needle') ? 0.6 : 0);
+  const floorTime = (F) => F.time + (hasLoot('ring') ? 8 : 0);
+
+  // ---------- input: microphone, keys, slot taps, simulated voice ----------
+  let mic = null, micState = 'idle';
+  const keyHeld = [false, false, false, false, false];
+  const tapHeld = [false, false, false, false, false];
+  let simVoice = null; // { midi, level } — debugging / automated checks
+  let voice = { midi: 0, hz: 0, note: '', level: 0, voiced: false, sim: false, simBand: -1 };
+  let vb = { band: -1, pos: 'in', active: false };
+  const trace = [];
+
+  function readVoice() {
+    let fb = -1;
+    for (let i = 0; i < 5; i++) if (keyHeld[i] || tapHeld[i]) { fb = i; break; }
+    let r = null;
+    if (mic && mic.running) r = mic.update();
+    if (fb >= 0) {
+      const b = bandBounds(fb); const midi = (b.lo + b.hi) / 2;
+      return { midi, hz: P.midiToHz(midi), note: P.midiToName(midi), level: 1, voiced: true, sim: true, simBand: fb };
+    }
+    if (simVoice) return { midi: simVoice.midi, hz: P.midiToHz(simVoice.midi), note: P.midiToName(simVoice.midi), level: simVoice.level == null ? 1 : simVoice.level, voiced: true, sim: false, simBand: -1 };
+    if (r) return { midi: r.midi, hz: r.hz, note: r.note, level: r.level, voiced: r.voiced, sim: false, simBand: -1 };
+    return { midi: 0, hz: 0, note: '', level: 0, voiced: false, sim: false, simBand: -1 };
+  }
+  const voiceActive = (v) => v.voiced && (v.sim || v.level >= settings.threshold);
+  function computeBand() {
+    if (!voiceActive(voice)) { vb = { band: -1, pos: 'in', active: false }; return; }
+    const b = bandOf(voice.midi, G.lastBand);
+    vb = { band: b.band, pos: b.pos, active: true };
+    if (b.band >= 0) G.lastBand = b.band;
+  }
+
+  async function enableMic() {
+    if (micState === 'ok' || micState === 'busy') return micState === 'ok';
+    micState = 'busy'; setMicStatus();
+    try {
+      mic = new P.PitchTracker({ fftSize: 4096 });
+      applyMicRange();
+      await mic.start();
+      micState = 'ok';
+    } catch (e) {
+      micState = 'err'; mic = null;
+    }
+    setMicStatus();
+    return micState === 'ok';
+  }
+  function applyMicRange() {
+    if (!mic) return;
+    // wide enough for tuning as well as play
+    mic.minHz = P.midiToHz(30) / 1.1;
+    mic.maxHz = P.midiToHz(100) * 1.1;
+  }
+  function setMicStatus() {
+    const el = $('micStatus'), live = $('micLive'), btn = $('btnMic');
+    el.className = 'mic-status';
+    if (micState === 'ok') { el.textContent = t('micOk'); el.classList.add('ok'); live.hidden = false; btn.hidden = true; }
+    else if (micState === 'err') { el.textContent = t('micErr'); el.classList.add('err'); live.hidden = true; btn.hidden = false; }
+    else if (micState === 'busy') { el.textContent = t('micBusy'); live.hidden = true; }
+    else { el.textContent = t('micIdle'); live.hidden = true; btn.hidden = false; }
+  }
+
+  // ---------- DOM refs ----------
+  const canvas = $('scene'), ctx = canvas.getContext('2d');
+  const wrap = $('sceneWrap'), stage = $('stage');
+  const traceCanvas = $('trace'), traceCtx = traceCanvas.getContext('2d');
+  let k = 2, dpr = 1;
+  const slotEls = [];
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    const sw = Math.max(120, stage.clientWidth - 8), sh = Math.max(80, stage.clientHeight - 8);
+    const fit = Math.min(sw / W, sh / H);
+    k = Math.max(1, Math.round(fit * dpr));
+    canvas.width = W * k; canvas.height = H * k;
+    const cssW = Math.floor(W * fit), cssH = Math.floor(H * fit);
+    wrap.style.width = cssW + 'px'; wrap.style.height = cssH + 'px';
+    canvas.style.width = '100%'; canvas.style.height = '100%';
+    ctx.imageSmoothingEnabled = false;
+    const tr = traceCanvas.getBoundingClientRect();
+    traceCanvas.width = Math.max(1, Math.floor(tr.width * dpr));
+    traceCanvas.height = Math.max(1, Math.floor(tr.height * dpr));
+  }
+
+  function buildSlots() {
+    const host = $('slots');
+    for (let i = 0; i < 5; i++) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'slot'; b.dataset.band = String(i);
+      b.style.setProperty('--c', LV.SPELLS[i].color);
+      const icon = document.createElement('span'); icon.className = 'slot-icon'; icon.textContent = LV.SPELLS[i].icon;
+      const name = document.createElement('span'); name.className = 'slot-name';
+      const rng = document.createElement('span'); rng.className = 'slot-range num';
+      const ch = document.createElement('span'); ch.className = 'slot-charge'; ch.appendChild(document.createElement('i'));
+      b.append(icon, name, rng, ch);
+      const down = (e) => { e.preventDefault(); tapHeld[i] = true; sfx.init(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } };
+      const up = () => { tapHeld[i] = false; };
+      b.addEventListener('pointerdown', down);
+      b.addEventListener('pointerup', up);
+      b.addEventListener('pointercancel', up);
+      b.addEventListener('lostpointercapture', up);
+      b.addEventListener('contextmenu', (e) => e.preventDefault());
+      host.appendChild(b);
+      slotEls.push({ el: b, name, rng, fill: ch.firstChild });
+    }
+  }
+  function refreshRanges() {
+    const r = range();
+    for (let i = 0; i < 5; i++) { slotEls[i].name.textContent = spellName(i); slotEls[i].rng.textContent = bandRangeLabel(i); slotEls[i].el.setAttribute('aria-label', spellName(i)); }
+    $('dashRange').textContent = t('dashRange', { lo: P.midiToName(r.lo), hi: P.midiToName(r.hi) });
+    $('rangeNote').textContent = P.midiToName(r.lo) + ' – ' + P.midiToName(r.hi);
+    $('rangeCustom').hidden = !validCustom();
+    document.querySelectorAll('#segRange button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.range === settings.range)));
+  }
+  function refreshThreshold() {
+    $('thresh').value = String(settings.threshold);
+    $('volThresh').style.bottom = (settings.threshold * 100) + '%';
+    $('micThresh').style.left = (settings.threshold * 100) + '%';
+  }
+  function applyLang() {
+    document.documentElement.lang = settings.lang === 'zh' ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.dataset.i18n;
+      if (key === 'chantPower') el.innerHTML = t(key); else el.textContent = t(key);
+    });
+    document.title = t('title') === 'VOX TOWER' ? 'Vox Tower' : t('title');
+    document.querySelectorAll('.seg-lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === settings.lang)));
+    $('sfxState').textContent = t(settings.sfx ? 'on' : 'off');
+    refreshRanges();
+    setMicStatus();
+    renderHighScores();
+    renderHearts();
+    updateHudStatic();
+    if (G.screen === 'intro') fillIntro();
+    if (G.screen === 'result') fillResult(G.resultKind);
+    if (G.screen === 'map') renderMap();
+    if (G.screen === 'tune') renderTune();
+    renderStartHint();
+    if (boss.action) showAction();
+  }
+
+  // ---------- HUD ----------
+  function renderHearts() {
+    const host = $('hearts'); host.innerHTML = '';
+    host.setAttribute('aria-label', t('hearts') + ' ' + G.hearts + '/' + MAX_HEARTS);
+    for (let i = 0; i < MAX_HEARTS; i++) {
+      host.appendChild(spriteCanvas(LV.HEART.sheet, i < G.hearts ? LV.HEART.full : LV.HEART.empty, 3, null, 0, 27));
+    }
+  }
+  function updateHudStatic() {
+    const i = G.floor;
+    $('hudFloor').textContent = floorLabel(i);
+    $('hudFloorName').textContent = tf(i, 'name');
+    $('hudBossName').textContent = tf(i, 'boss');
+    $('hudWeakSpell').textContent = spellLabel(G.weak);
+    $('hudBossHp').textContent = String(Math.max(0, Math.ceil(boss.hp)));
+    $('hudTimeVal').textContent = Math.ceil(G.timeLeft) + 's';
+    for (let s = 0; s < 5; s++) slotEls[s].el.classList.toggle('weak', s === G.weak && G.screen !== 'title');
+  }
+  function updateHud() {
+    $('hudTimeVal').textContent = Math.ceil(G.timeLeft) + 's';
+    $('hudTimeFill').style.transform = 'scaleX(' + clamp(G.timeLeft / G.floorTime, 0, 1) + ')';
+    $('hudBossHp').textContent = String(Math.max(0, Math.ceil(boss.hp)));
+    $('hudBossFill').style.transform = 'scaleX(' + clamp(boss.hp / boss.maxHp, 0, 1) + ')';
+    $('hudScore').textContent = String(G.score + (G.screen === 'battle' ? G.damageScore : 0));
+
+    const a = boss.action;
+    const target = a ? (a.type === 'attack' ? a.band : a.seq[a.idx]) : -1;
+    for (let s = 0; s < 5; s++) {
+      slotEls[s].el.classList.toggle('active', vb.band === s);
+      slotEls[s].el.classList.toggle('target', !!a && a.type === 'attack' && s === target);
+      slotEls[s].fill.style.width = (G.charge[s] * 100) + '%';
+    }
+    // readout
+    const note = $('readNote'), hz = $('readHz'), hint = $('readHint');
+    if (voice.voiced) { note.textContent = voice.note; hz.textContent = voice.hz.toFixed(1) + ' Hz'; }
+    else { note.textContent = '—'; hz.textContent = '0 Hz'; }
+    hint.className = 'read-hint';
+    if (a && a.type === 'attack' && G.screen === 'battle') { hint.textContent = t('block') + ' ' + spellLabel(a.band); hint.classList.add('danger'); }
+    else if (voice.sim) { hint.textContent = t('hintSim', { n: voice.simBand + 1, spell: spellName(voice.simBand) }); hint.classList.add('ok'); }
+    else if (!voice.voiced) { hint.textContent = t('hintReady'); }
+    else if (voice.level < settings.threshold) { hint.textContent = t('hintQuiet'); hint.classList.add('warn'); }
+    else if (vb.pos === 'low') { hint.textContent = t('hintLow'); hint.classList.add('warn'); }
+    else if (vb.pos === 'high') { hint.textContent = t('hintHigh'); hint.classList.add('warn'); }
+    else { hint.textContent = t('hintCharging', { spell: spellName(vb.band) }); hint.classList.add('ok'); }
+    // volume
+    const vf = $('volFill');
+    vf.style.height = (clamp(voice.sim ? 1 : voice.level, 0, 1) * 100) + '%';
+    vf.classList.toggle('hot', vb.active);
+    if (G.screen === 'title' && micState === 'ok') {
+      const mf = $('micFill');
+      mf.style.width = (clamp(voice.level, 0, 1) * 100) + '%';
+      mf.classList.toggle('hot', voice.level >= settings.threshold);
+      $('micNote').textContent = voice.voiced ? voice.note : '—';
+    }
+    drawTrace();
+  }
+
+  function drawTrace() {
+    const c = traceCtx, w = traceCanvas.width, h = traceCanvas.height;
+    c.clearRect(0, 0, w, h);
+    if (!trace.length) return;
+    const r = range();
+    const px = Math.max(2, Math.round(2 * dpr));
+    for (let i = 0; i < trace.length; i++) {
+      const p = trace[i];
+      const age = timeNow - p.t;
+      if (age > TRACE_SECONDS) continue;
+      const x = clamp((p.midi - r.lo) / (r.hi - r.lo), -0.02, 1.02) * w;
+      const y = h * 0.14 + (age / TRACE_SECONDS) * h * 0.72;
+      c.globalAlpha = (1 - age / TRACE_SECONDS) * 0.9;
+      c.fillStyle = p.band >= 0 ? LV.SPELLS[p.band].color : '#9aa3d9';
+      const s = i === trace.length - 1 ? px * 3 : px * 2;
+      c.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s);
+    }
+    c.globalAlpha = 1;
+  }
+
+  // ---------- banners & bubbles ----------
+  let bannerTimer = 0, bubbleTimer = 0, comboTimer = 0, resultTimer = 0;
+  function banner(text, cls, ms) {
+    const el = $('banner');
+    el.textContent = text; el.className = 'banner' + (cls ? ' ' + cls : ''); el.hidden = false;
+    clearTimeout(bannerTimer); bannerTimer = setTimeout(() => { el.hidden = true; }, ms || 1500);
+  }
+  function bossSay(text, ms) {
+    if (boss.action) return; // the action bubble owns that spot
+    const el = $('bossBubble');
+    el.textContent = text; el.hidden = false;
+    positionAboveBoss(el);
+    clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => { el.hidden = true; }, ms || 2600);
+  }
+  function positionAboveBoss(el) {
+    const F = FLOORS[G.floor];
+    const size = 16 * F.boss.scale;
+    const top = GROUND_Y - size - (F.boss.fly ? 26 : 0) - 6;
+    el.style.left = ((boss.x - size / 2 + 10) / W * 100) + '%';
+    el.style.top = (top / H * 100) + '%';
+  }
+  function showCombo(n) {
+    const el = $('combo');
+    el.textContent = t('combo', { n }); el.hidden = false;
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    clearTimeout(comboTimer); comboTimer = setTimeout(() => { el.hidden = true; }, 1200);
+  }
+  function hitFlash() {
+    if (reduceMotion) return;
+    const el = $('hitFlash'); el.hidden = false;
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    setTimeout(() => { el.hidden = true; }, 500);
+  }
+
+  // boss action bubble (attack to block / rune pattern)
+  function showAction() {
+    const a = boss.action, el = $('bossAction');
+    if (!a) { el.hidden = true; return; }
+    el.innerHTML = '';
+    el.className = 'action ' + (a.type === 'attack' ? 'attack' : 'rune');
+    const label = document.createElement('span'); label.className = 'act-label';
+    label.textContent = a.type === 'attack' ? t('block') : t('runeSing');
+    const icons = document.createElement('div'); icons.className = 'act-icons';
+    const seq = a.type === 'attack' ? [a.band] : a.seq;
+    seq.forEach((b, i) => { const s = document.createElement('span'); s.className = 'act-icon'; s.textContent = LV.SPELLS[b].icon; s.dataset.i = String(i); icons.appendChild(s); });
+    const timer = document.createElement('div'); timer.className = 'act-timer'; timer.appendChild(document.createElement('i'));
+    el.append(label, icons, timer);
+    el.hidden = false;
+    $('bossBubble').hidden = true;
+    positionAboveBoss(el);
+    updateActionUI();
+  }
+  function updateActionUI(shakeIt) {
+    const a = boss.action, el = $('bossAction');
+    if (!a || el.hidden) return;
+    const bar = el.querySelector('.act-timer i');
+    if (bar) bar.style.transform = 'scaleX(' + clamp(1 - a.t / a.dur, 0, 1) + ')';
+    if (a.type === 'pattern') {
+      el.querySelectorAll('.act-icon').forEach((s, i) => { s.classList.toggle('done', i < a.idx); s.classList.toggle('next', i === a.idx); });
+    }
+    if (shakeIt) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+  }
+  function hideAction() { $('bossAction').hidden = true; }
+
+  // ---------- screens ----------
+  function showOverlay(name) {
+    ['start', 'title', 'tune', 'map', 'intro', 'result'].forEach((n) => { $('ov' + n[0].toUpperCase() + n.slice(1)).hidden = name !== n; });
+    $('app').dataset.screen = name || 'battle';
+  }
+  function renderStartHint() {
+    const hint = $('startHint');
+    if (validCustom()) { const r = settings.customRange; hint.textContent = t('startHintTuned', { lo: P.midiToName(r.lo), hi: P.midiToName(r.hi) }); }
+    else hint.textContent = t('startHint');
+  }
+  function showStart() {
+    clearTimeout(resultTimer);
+    G.screen = 'start';
+    $('bossBubble').hidden = true; $('banner').hidden = true; $('combo').hidden = true; hideAction();
+    const best = scores.list[0];
+    const el = $('startBest');
+    if (best) { el.textContent = t('startBest', { n: best.score, name: best.name || '\u2014' }); el.hidden = false; }
+    else el.hidden = true;
+    renderStartHint();
+    showOverlay('start');
+    updateHudStatic();
+  }
+  function showTitle() {
+    clearTimeout(resultTimer);
+    G.screen = 'title';
+    $('bossBubble').hidden = true; $('banner').hidden = true; $('combo').hidden = true; hideAction();
+    renderHighScores();
+    showOverlay('title');
+    updateHudStatic();
+  }
+  function newRun() {
+    G.score = 0; G.loots = []; G.floorsCleared = 0; G.stars = {}; G.hearts = MAX_HEARTS;
+    G.runId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    renderHearts();
+    showMap(0, -1);
+  }
+
+  function startFloor(i, opts) {
+    opts = opts || {};
+    const F = FLOORS[i];
+    clearTimeout(resultTimer);
+    G.floor = i; G.weak = F.weak[0];
+    boss.hp = boss.maxHp = F.hp; boss.phase = 0; boss.dead = 0; boss.faded = 0; boss.flash = 0; boss.hurt = 0; boss.hop = 0;
+    boss.tint = null; boss.action = null; boss.next = F.attackEvery * 0.6; boss.lastAttack = -1;
+    G.floorTime = floorTime(F); G.timeLeft = G.floorTime;
+    G.damageScore = 0; G.wrongCasts = 0; G.combo = 0; G.bestCombo = 0; G.cooldown = 0; G.lastBand = -1;
+    G.heartsLostFloor = 0; G.actionsDone = 0; G.graceBand = -1; G.graceUntil = 0;
+    if (opts.retry) G.hearts = MAX_HEARTS;
+    else if (hasLoot('tonic')) G.hearts = Math.min(MAX_HEARTS, G.hearts + 1);
+    G.charge.fill(0);
+    projectiles = []; enemyShots = []; particles = []; popups = [];
+    hero.hurt = 0; hero.shield = 0;
+    $('bossBubble').hidden = true; $('banner').hidden = true; $('combo').hidden = true; hideAction();
+    renderHearts();
+    G.screen = 'intro';
+    fillIntro();
+    showOverlay('intro');
+    updateHudStatic();
+  }
+
+  function fillIntro() {
+    const i = G.floor, F = FLOORS[i];
+    $('introFloor').textContent = F.bonus ? t('floorEyebrowBonus') : t('floorEyebrow', { n: i + 1, total: MAIN_FLOORS });
+    $('introName').textContent = tf(i, 'name');
+    const art = $('introBoss'); art.innerHTML = ''; art.appendChild(spriteCanvas(F.boss.sheet, F.boss.tile, 5));
+    $('introTaunt').textContent = '“' + tf(i, 'taunt') + '”';
+    const w0 = F.weak[0];
+    $('introHints').innerHTML = [
+      t('hintTimeLimit', { n: G.floorTime, h: G.hearts }),
+      t('hintWeak', { spell: spellLabel(w0) + ' (' + bandRangeLabel(w0) + ')' }),
+      t('hintTip', { tip: tf(i, 'tip') }),
+      t('hintBlock'),
+      t('hintRune'),
+    ].join('<br>');
+  }
+
+  function beginBattle() {
+    showOverlay(null);
+    G.screen = 'battle';
+    banner(t('banPurify'), 'gold', 1500);
+    bossSay(tf(G.floor, 'taunt'), 3200);
+    sfx.play('start');
+    updateHudStatic();
+  }
+
+  // ---------- battle ----------
+  function cast(band) {
+    const F = FLOORS[G.floor];
+    const size = 16 * F.boss.scale;
+    const targetY = GROUND_Y - size / 2 - (F.boss.fly ? 26 : 0);
+    projectiles.push({ x: hero.x + 22, y: GROUND_Y - 22, y0: GROUND_Y - 22, ty: targetY, vx: 250 + band * 25, band, t: 0, x0: hero.x + 22 });
+    hero.cast = 1; hero.castBand = band;
+    slotEls[band].el.classList.remove('fired'); void slotEls[band].el.offsetWidth; slotEls[band].el.classList.add('fired');
+    sfx.play('cast', band);
+    for (let i = 0; i < 6; i++) particles.push({ x: hero.x + 22, y: GROUND_Y - 22, vx: rand(20, 90), vy: rand(-50, 50), life: rand(0.2, 0.4), t: 0, color: LV.SPELLS[band].color, size: 2 });
+
+    let special = band === G.graceBand && timeNow < G.graceUntil;
+    const grace = () => { G.graceBand = band; G.graceUntil = timeNow + 0.8; special = true; };
+    const a = boss.action;
+    if (a && a.type === 'attack' && !a.blocked && band === a.band) {
+      a.blocked = true; grace();
+      blockEffect();
+      endBossAction();
+    } else if (a && a.type === 'pattern') {
+      if (band === a.seq[a.idx]) {
+        a.idx++; grace(); sfx.play('runeStep', band); updateActionUI();
+        if (a.idx >= a.seq.length) runeBreak();
+      } else if (a.idx > 0 && band === a.seq[a.idx - 1]) {
+        special = true; // still holding the note that completed the previous step
+      } else if (a.idx > 0 && !special) {
+        a.idx = 0; updateActionUI(true);
+      }
+    }
+    // late block: a shot already in flight can still be shattered
+    for (const s of enemyShots) if (!s.hit && s.band === band) { s.hit = true; grace(); blockEffect(s.x, s.y); }
+    if (band !== G.weak && !special) G.wrongCasts++;
+  }
+
+  function blockEffect(x, y) {
+    hero.shield = 0.5;
+    G.damageScore += 150;
+    popups.push({ x: x == null ? hero.x + 30 : x, y: (y == null ? GROUND_Y - 44 : y - 10), text: t('blocked'), color: '#5ee0ff', t: 0, life: 0.9, big: true });
+    for (let i = 0; i < 14; i++) particles.push({ x: x == null ? hero.x + 18 : x, y: y == null ? GROUND_Y - 24 : y, vx: rand(-80, 120), vy: rand(-120, 40), life: rand(0.3, 0.6), t: 0, color: '#bff4ff', size: 2, grav: 200 });
+    sfx.play('block');
+  }
+
+  function hitBoss(pr) {
+    const weak = pr.band === G.weak;
+    const dmg = weak ? DMG_WEAK : DMG_OTHER;
+    boss.hp = Math.max(0, boss.hp - dmg);
+    boss.flash = 0.14; boss.hurt = 0.28;
+    G.damageScore += dmg * 10;
+    if (weak) { G.combo++; G.bestCombo = Math.max(G.bestCombo, G.combo); if (G.combo >= 3) showCombo(G.combo); G.damageScore += Math.min(G.combo, 10) * 5; }
+    else G.combo = 0;
+    if (!reduceMotion) shake = weak ? 0.22 : 0.1;
+    popups.push({ x: pr.x, y: pr.y - 10, text: '-' + dmg, color: weak ? LV.SPELLS[pr.band].color : '#c9cbe6', t: 0, life: 0.8, big: weak });
+    const col = LV.SPELLS[pr.band].color;
+    const n = weak ? 18 : 8;
+    for (let i = 0; i < n; i++) particles.push({ x: pr.x, y: pr.y, vx: rand(-120, 120), vy: rand(-140, 60), life: rand(0.3, 0.7), t: 0, color: col, size: weak ? 3 : 2, grav: 220 });
+    sfx.play(weak ? 'hitWeak' : 'hit');
+    if (weak && Math.random() < 0.3 && $('bossBubble').hidden) bossSay(pick(t('hurt')), 1200);
+    afterDamage();
+  }
+
+  function afterDamage() {
+    const F = FLOORS[G.floor];
+    const n = F.weak.length, nextPhase = boss.phase + 1;
+    if (nextPhase < n && boss.hp > 0 && boss.hp <= boss.maxHp * (1 - nextPhase / n)) {
+      boss.phase = nextPhase; G.weak = F.weak[nextPhase]; G.combo = 0;
+      boss.tint = LV.SPELLS[G.weak].color;
+      banner(t('banWeakChange', { spell: spellLabel(G.weak) }), 'red', 2200);
+      const say = tf(G.floor, 'taunt2') || pick(t('idle'));
+      if (boss.action) endBossAction();
+      bossSay(say, 3000);
+      $('hudWeak').classList.remove('pulse'); void $('hudWeak').offsetWidth; $('hudWeak').classList.add('pulse');
+      sfx.play('phase');
+      updateHudStatic();
+    }
+    if (boss.hp <= 0) victory();
+  }
+
+  function runeBreak() {
+    const F = FLOORS[G.floor];
+    const size = 16 * F.boss.scale;
+    const cy = GROUND_Y - size / 2 - (F.boss.fly ? 26 : 0);
+    boss.hp = Math.max(0, boss.hp - RUNE_DMG);
+    boss.flash = 0.3; boss.hurt = 0.45;
+    if (!reduceMotion) shake = 0.4;
+    G.damageScore += RUNE_DMG * 10 + 300;
+    popups.push({ x: boss.x, y: cy - 20, text: '-' + RUNE_DMG, color: '#ffcc33', t: 0, life: 1.1, big: true });
+    for (let i = 0; i < 36; i++) particles.push({ x: boss.x + rand(-size / 2, size / 2), y: cy + rand(-size / 2, size / 2), vx: rand(-160, 160), vy: rand(-200, 40), life: rand(0.4, 0.9), t: 0, color: pick(['#ffcc33', '#fff0a8', '#ffffff']), size: 3, grav: 200 });
+    banner(t('runeBreak'), 'gold', 1400);
+    sfx.play('rune');
+    endBossAction();
+    afterDamage();
+  }
+
+  function startBossAction() {
+    const F = FLOORS[G.floor];
+    const wantPattern = G.actionsDone > 0 && Math.random() < 0.4;
+    if (wantPattern) {
+      const seq = []; let prev = -1;
+      for (let i = 0; i < F.patternLen; i++) { let b; do { b = Math.floor(Math.random() * 5); } while (b === prev); seq.push(b); prev = b; }
+      boss.action = { type: 'pattern', seq, idx: 0, t: 0, dur: F.patternLen * 2.5 + 1 };
+      sfx.play('runeOpen');
+    } else {
+      let b, guard = 0;
+      do { b = Math.floor(Math.random() * 5); guard++; } while ((b === G.weak || b === boss.lastAttack) && guard < 20);
+      boss.lastAttack = b;
+      boss.action = { type: 'attack', band: b, t: 0, dur: blockWindow(F), blocked: false };
+      boss.hop = 1;
+      sfx.play('warn');
+    }
+    G.actionsDone++;
+    showAction();
+  }
+  function forceAction(type, arg) {
+    if (type === 'attack') boss.action = { type: 'attack', band: arg, t: 0, dur: blockWindow(FLOORS[G.floor]), blocked: false };
+    else boss.action = { type: 'pattern', seq: arg, idx: 0, t: 0, dur: arg.length * 2.5 + 1 };
+    G.actionsDone++;
+    showAction();
+  }
+  function updateBossAction(dt) {
+    const a = boss.action; if (!a) return;
+    a.t += dt;
+    updateActionUI();
+    if (a.t >= a.dur) {
+      if (a.type === 'attack' && !a.blocked) bossFire(a.band);
+      endBossAction();
+    }
+  }
+  function endBossAction() {
+    boss.action = null; hideAction();
+    boss.next = FLOORS[G.floor].attackEvery + rand(-1, 1);
+  }
+  function bossFire(band) {
+    const F = FLOORS[G.floor]; const size = 16 * F.boss.scale;
+    const y0 = GROUND_Y - size / 2 - (F.boss.fly ? 26 : 0);
+    enemyShots.push({ x: boss.x - size / 2, x0: boss.x - size / 2, y: y0, y0, vx: -230, band, t: 0, hit: false });
+    boss.hop = 1;
+    sfx.play('shoot');
+  }
+  function hurtHero() {
+    G.hearts = Math.max(0, G.hearts - 1); G.heartsLostFloor++; G.combo = 0;
+    hero.hurt = 0.6; if (!reduceMotion) shake = 0.3;
+    hitFlash();
+    popups.push({ x: hero.x, y: GROUND_Y - 42, text: '-1', color: '#ff5c8a', t: 0, life: 0.9, big: true });
+    renderHearts();
+    const lost = $('hearts').children[G.hearts]; if (lost) lost.classList.add('lost');
+    sfx.play('hurt');
+    if (G.hearts <= 0) defeat('hearts');
+  }
+
+  function victory() {
+    boss.dead = 1;
+    G.screen = 'dying';
+    $('bossBubble').hidden = true; hideAction(); boss.action = null;
+    enemyShots = [];
+    const F = FLOORS[G.floor];
+    const size = 16 * F.boss.scale;
+    const cy = GROUND_Y - size / 2 - (F.boss.fly ? 26 : 0);
+    for (let i = 0; i < 40; i++) particles.push({ x: boss.x + rand(-size / 2, size / 2), y: cy + rand(-size / 2, size / 2), vx: rand(-90, 90), vy: rand(-160, -20), life: rand(0.5, 1.1), t: 0, color: pick(['#ffffff', F.accent, '#ffcc33']), size: 3, grav: 120 });
+    sfx.play('win');
+    const timeBonus = Math.round(G.timeLeft) * 8;
+    const perfect = G.wrongCasts === 0 ? 500 : 0;
+    const stars = 1 + (G.timeLeft / G.floorTime >= 0.4 ? 1 : 0) + ((G.wrongCasts === 0 && G.heartsLostFloor === 0) ? 1 : 0);
+    G.floorScore = G.damageScore + timeBonus + perfect;
+    G.result = { timeBonus, perfect, floorScore: G.floorScore, stars };
+    G.score += G.floorScore;
+    G.stars[G.floor] = Math.max(G.stars[G.floor] || 0, stars);
+    bestStars[F.id] = Math.max(bestStars[F.id] || 0, stars); store.set('stars', bestStars);
+    if (!G.loots.some((l) => l.id === F.loot.id)) G.loots.push(F.loot);
+    G.floorsCleared = Math.max(G.floorsCleared, G.floor + 1);
+    if (G.runId) { scores.record(G.runId, G.score, G.floorsCleared); renderHighScores(); }
+    resultTimer = setTimeout(() => { G.screen = 'result'; fillResult('win'); showOverlay('result'); }, 1100);
+  }
+
+  function defeat(reason) {
+    G.screen = 'result';
+    G.loseReason = reason || 'time';
+    boss.action = null; hideAction(); $('bossBubble').hidden = true;
+    banner(t(reason === 'hearts' ? 'banHearts' : 'banTimeUp'), 'red', 1500);
+    sfx.play('lose');
+    fillResult('lose');
+    resultTimer = setTimeout(() => showOverlay('result'), 700);
+  }
+
+  function starsEl(n, small) {
+    const el = document.createElement('span'); el.className = 'stars' + (small ? ' small' : '');
+    for (let i = 0; i < 3; i++) { const s = document.createElement('span'); s.className = i < n ? 'on' : 'off'; s.textContent = '★'; el.appendChild(s); }
+    el.setAttribute('aria-label', t('stars') + ' ' + n + '/3');
+    return el;
+  }
+
+  function fillResult(kind) {
+    G.resultKind = kind;
+    const card = $('resultCard'); card.innerHTML = '';
+    const F = FLOORS[G.floor];
+    const h2 = document.createElement('h2');
+    const art = document.createElement('div'); art.className = 'result-art';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn btn-gold btn-big';
+    const box = (label, val, cls) => { const d = document.createElement('div'); d.className = 'score-box' + (cls ? ' ' + cls : ''); const s = document.createElement('span'); s.textContent = label; const b = document.createElement('b'); b.textContent = val; d.append(s, b); return d; };
+
+    if (kind === 'win') {
+      h2.className = 'result-title win'; h2.textContent = t('win');
+      const srow = document.createElement('div'); srow.className = 'stars-row';
+      srow.append(span('', t('stars')), starsEl(G.result.stars));
+      art.appendChild(spriteCanvas(F.loot.sheet, F.loot.tile, 4));
+      const ln = document.createElement('div'); ln.className = 'loot-name'; ln.textContent = t('loot', { name: tf(G.floor, 'loot') });
+      const fl = document.createElement('p'); fl.className = 'loot-flavor'; fl.textContent = tf(G.floor, 'flavor');
+      const ef = document.createElement('p'); ef.className = 'loot-effect'; ef.textContent = t('effect', { text: effectText(F.loot.id) });
+      const grid = document.createElement('div'); grid.className = 'score-grid';
+      grid.append(box(t('timeBonus'), '+' + G.result.timeBonus), box(t('perfectBonus'), '+' + G.result.perfect), box(t('floorScore'), String(G.result.floorScore)), box(t('total'), String(G.score), 'total'));
+      btn.textContent = t('climbOn');
+      btn.addEventListener('click', () => { sfx.play('ui'); nextFloor(); });
+      card.append(h2, srow, art, ln, fl, ef, grid, btn);
+    } else if (kind === 'final') {
+      h2.className = 'result-title win'; h2.textContent = t('finalTitle');
+      art.appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 4));
+      G.loots.forEach((l) => art.appendChild(spriteCanvas(l.sheet, l.tile, 3)));
+      const p = document.createElement('p'); p.className = 'result-text'; p.textContent = t('finalText');
+      const totalStars = Object.values(G.stars).reduce((a, b) => a + b, 0);
+      const srow = document.createElement('div'); srow.className = 'stars-row';
+      srow.append(span('', t('stars')), span('num', totalStars + ' / ' + (Object.keys(G.stars).length * 3)));
+      card.append(h2, art, p, srow);
+      scoreSection(card);
+      const grid = document.createElement('div'); grid.className = 'score-grid';
+      grid.append(box(t('finalScore'), String(G.score), 'total'));
+      btn.textContent = t('playAgain');
+      btn.addEventListener('click', () => { sfx.play('ui'); showStart(); });
+      card.append(grid, btn);
+    } else {
+      const hearts = G.loseReason === 'hearts';
+      h2.className = 'result-title lose'; h2.textContent = t(hearts ? 'loseHearts' : 'lose');
+      art.appendChild(spriteCanvas(F.boss.sheet, F.boss.tile, 4));
+      const p = document.createElement('p'); p.className = 'result-text'; p.textContent = t(hearts ? 'loseHeartsText' : 'loseText', { boss: tf(G.floor, 'boss') });
+      btn.textContent = t('tryAgain');
+      btn.addEventListener('click', () => { sfx.play('ui'); startFloor(G.floor, { retry: true }); });
+      card.append(h2, art, p);
+      scoreSection(card);
+      card.append(btn);
+    }
+  }
+
+  function nextFloor() {
+    const next = G.floor + 1;
+    if (next >= NUM_FLOORS) showFinal();
+    else showMap(next, G.floor);
+  }
+  function showFinal() {
+    clearTimeout(resultTimer);
+    G.screen = 'result'; fillResult('final'); showOverlay('result'); sfx.play('final');
+  }
+
+  // ---------- tower map ----------
+  function showMap(target, from) {
+    G.mapTarget = target; G.mapFrom = from;
+    G.screen = 'map';
+    renderMap();
+    showOverlay('map');
+  }
+  function renderMap() {
+    const host = $('mapRows'); host.innerHTML = '';
+    const target = G.mapTarget, from = G.mapFrom == null ? -1 : G.mapFrom;
+    const bonusOpen = hasLoot('crest') || target >= MAIN_FLOORS;
+    const rowH = 58; // 52px row + 6px gap
+    for (let idx = NUM_FLOORS - 1; idx >= 0; idx--) {
+      const F = FLOORS[idx];
+      const locked = F.bonus && !bonusOpen;
+      const reached = idx <= target && !locked;
+      const row = document.createElement('div');
+      row.className = 'map-row' + (idx === target ? ' current' : '') + (locked ? ' locked' : '');
+      const no = document.createElement('span'); no.className = 'map-no'; no.textContent = F.bonus ? '★' : String(idx + 1);
+      const art = reached ? spriteCanvas(F.boss.sheet, F.boss.tile, 2, null, 0, 40) : spriteCanvas(F.boss.sheet, F.boss.tile, 2, '#0b1030', 1, 40);
+      const name = document.createElement('span'); name.className = 'map-name';
+      name.textContent = reached ? tf(idx, 'name') : t('unknown');
+      if (locked) { const sm = document.createElement('small'); sm.textContent = t('locked'); name.appendChild(sm); }
+      const best = Math.max(G.stars[idx] || 0, bestStars[F.id] || 0);
+      row.append(no, art, name, starsEl(best, true));
+      host.appendChild(row);
+    }
+    const wiz = document.createElement('div'); wiz.className = 'map-wizard';
+    wiz.appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 3, null, 0, 48));
+    const rowTop = (idx) => (NUM_FLOORS - 1 - idx) * rowH + 2;
+    wiz.style.top = (from < 0 ? rowTop(0) + rowH : rowTop(from)) + 'px';
+    host.appendChild(wiz);
+    setTimeout(() => { wiz.style.top = rowTop(target) + 'px'; }, 60);
+
+    const btns = $('mapButtons'); btns.innerHTML = '';
+    const enter = document.createElement('button'); enter.type = 'button'; enter.className = 'btn btn-gold btn-big';
+    enter.textContent = FLOORS[target].bonus ? t('enterBonus') : t('enterFloor', { n: target + 1 });
+    enter.addEventListener('click', () => { sfx.init(); sfx.play('ui'); startFloor(target); });
+    btns.appendChild(enter);
+    if (FLOORS[target].bonus) {
+      const fin = document.createElement('button'); fin.type = 'button'; fin.className = 'btn btn-line';
+      fin.textContent = t('finishHere');
+      fin.addEventListener('click', () => { sfx.play('ui'); showFinal(); });
+      btns.appendChild(fin);
+    }
+  }
+
+  // ---------- wand tuning ----------
+  // Explicit steps: listen -> captured (confirm with Next) -> listen -> result.
+  // A step only starts listening after a short silence, so a note still being
+  // held from the previous step is never captured twice.
+  const tune = { step: 1, phase: 'listen', hold: 0, samples: [], lo: 0, hi: 0, waitSilence: false, silence: 0, ok: false };
+  function tuneListen(step, needSilence) {
+    tune.step = step; tune.phase = 'listen'; tune.hold = 0; tune.samples = [];
+    tune.waitSilence = !!needSilence; tune.silence = 0;
+    renderTune();
+  }
+  async function openTune(origin) {
+    sfx.init();
+    tune.origin = origin || 'lobby';
+    if (micState !== 'ok') {
+      const ok = await enableMic();
+      if (!ok) {
+        // No microphone: fall back to the settings screen, which explains the key controls.
+        if (tune.origin === 'start') showTitle();
+        $('micStatus').textContent = t('tuneNoMic'); $('micStatus').className = 'mic-status err';
+        return;
+      }
+    }
+    tune.lo = 0; tune.hi = 0; tune.ok = false;
+    G.screen = 'tune';
+    tuneListen(1, true);
+    showOverlay('tune');
+  }
+  function updateTune(dt) {
+    if (tune.phase !== 'listen') { renderTune(); return; }
+    const singing = voice.voiced && voice.level >= settings.threshold;
+    if (tune.waitSilence) {
+      tune.silence = singing ? 0 : tune.silence + dt;
+      if (tune.silence >= 0.35) { tune.waitSilence = false; tune.silence = 0; }
+      renderTune(); return;
+    }
+    if (singing) {
+      tune.samples.push(voice.midi); if (tune.samples.length > 90) tune.samples.shift();
+      tune.hold += dt;
+    } else {
+      tune.hold = Math.max(0, tune.hold - dt * 2);
+      if (tune.hold === 0) tune.samples.length = 0;
+    }
+    if (tune.hold >= TUNE_HOLD && tune.samples.length) {
+      const m = median(tune.samples);
+      tune.hold = 0; tune.samples.length = 0;
+      if (tune.step === 1) { tune.lo = m; tune.phase = 'captured'; sfx.play('tuneOk'); }
+      else { tune.hi = m; finishTune(); }
+    }
+    renderTune();
+  }
+  function finishTune() {
+    const lo = Math.round(tune.lo) + 1, hi = Math.round(tune.hi) - 1;
+    tune.phase = 'result';
+    if (hi - lo < TUNE_MIN_WIDTH) { tune.ok = false; sfx.play('lose'); renderTune(); return; }
+    settings.customRange = { lo, hi }; settings.range = 'custom';
+    store.set('customRange', settings.customRange); store.set('range', settings.range);
+    tune.ok = true;
+    refreshRanges();
+    sfx.play('win');
+    renderTune();
+  }
+  function renderTune() {
+    const stepEl = $('tuneStep'), text = $('tuneText'), msg = $('tuneMsg');
+    const loName = tune.lo ? P.midiToName(tune.lo) : '\u2014', hiName = tune.hi ? P.midiToName(tune.hi) : '\u2014';
+    stepEl.textContent = tune.step + ' / 2 \u00b7 ' + t(tune.step === 1 ? 'tuneStepLow' : 'tuneStepHigh');
+    stepEl.className = 'eyebrow num tune-step ' + (tune.step === 1 ? 'low' : 'high');
+    $('tuneLo').textContent = t('low') + ' ' + loName; $('tuneLo').classList.toggle('set', !!tune.lo);
+    $('tuneHi').textContent = t('high') + ' ' + hiName; $('tuneHi').classList.toggle('set', !!tune.hi);
+    $('tuneNote').textContent = voice.voiced ? voice.note : '\u2014';
+    $('tuneFill').style.width = (clamp(tune.hold / TUNE_HOLD, 0, 1) * 100) + '%';
+    msg.className = 'tune-msg';
+    let showCancel = true, showRedo = false, showNext = false, showDone = false, showRetry = false;
+    if (tune.phase === 'listen') {
+      text.textContent = t(tune.step === 1 ? 'tuneLow' : 'tuneHigh');
+      if (tune.waitSilence) { msg.textContent = t('tuneBreath'); msg.classList.add('warn'); }
+      else msg.textContent = tune.hold > 0.2 ? t('tuneHold') : '';
+      showRedo = tune.step === 2;
+    } else if (tune.phase === 'captured') {
+      text.textContent = t('tuneGotLow', { n: loName });
+      msg.textContent = t('tuneNextHint'); msg.classList.add('ok');
+      showRedo = true; showNext = true;
+    } else if (tune.ok) {
+      const r = settings.customRange;
+      text.textContent = t('tuneDone', { lo: P.midiToName(r.lo), hi: P.midiToName(r.hi) });
+      msg.textContent = ''; msg.classList.add('ok');
+      showDone = true; showCancel = false;
+    } else {
+      const lo = Math.round(tune.lo), hi = Math.round(tune.hi);
+      text.textContent = t('tuneNarrow', { lo: P.midiToName(lo), hi: P.midiToName(hi), n: Math.max(0, hi - lo), min: TUNE_MIN_WIDTH });
+      msg.textContent = t('tuneNarrowHint'); msg.classList.add('warn');
+      showRetry = true;
+    }
+    $('btnTuneCancel').hidden = !showCancel;
+    $('btnTuneRedo').hidden = !showRedo;
+    $('btnTuneNext').hidden = !showNext;
+    $('btnTuneDone').hidden = !showDone;
+    $('btnTuneRetry').hidden = !showRetry;
+    $('btnTuneSkip').hidden = !(tune.origin === 'start' && !(tune.phase === 'result' && tune.ok));
+  }
+
+  // ---------- runs & high scores ----------
+  function span(cls, text) { const el = document.createElement('span'); el.className = cls; el.textContent = text; return el; }
+
+  function renderHighScores() {
+    const host = $('hiscores'); if (!host) return;
+    host.innerHTML = '';
+    host.appendChild(span('hiscores-title', t('highScores')));
+    if (!scores.list.length) {
+      const p = document.createElement('p'); p.className = 'hiscores-empty'; p.textContent = t('noScores');
+      host.appendChild(p); return;
+    }
+    const ol = document.createElement('ol'); ol.className = 'hiscores-list';
+    scores.list.forEach((e, i) => {
+      const li = document.createElement('li');
+      li.title = new Date(e.date).toLocaleDateString();
+      li.append(span('rank num', String(i + 1)), span('name', e.name || '—'), span('score num', String(e.score)), span('floors num', floorsText(e.floors)));
+      ol.appendChild(li);
+    });
+    host.appendChild(ol);
+  }
+
+  function scoreSection(card) {
+    const prevBest = scores.list.filter((e) => e.id !== G.runId).reduce((m, e) => Math.max(m, e.score), 0);
+    const r = G.score > 0 && G.runId ? scores.record(G.runId, G.score, G.floorsCleared) : { rank: -1, entry: null };
+    const wrap = document.createElement('div'); wrap.className = 'run-record';
+    const best = document.createElement('div'); best.className = 'best-line';
+    best.appendChild(span('', t('best', { n: Math.max(scores.best(), G.score) })));
+    if (G.score > 0 && G.score > prevBest) best.appendChild(span('new-best', t('newBest')));
+    wrap.appendChild(best);
+    if (r.rank >= 0) {
+      const row = document.createElement('label'); row.className = 'name-row';
+      const input = document.createElement('input');
+      input.type = 'text'; input.className = 'name-input'; input.maxLength = 8; input.autocomplete = 'off'; input.spellcheck = false;
+      input.value = r.entry.name || ''; input.placeholder = t('namePlaceholder'); input.setAttribute('aria-label', t('nameLabel'));
+      input.addEventListener('input', () => { scores.setName(G.runId, input.value); renderHighScores(); });
+      row.append(span('', t('rankLabel', { n: r.rank + 1 })), input);
+      wrap.appendChild(row);
+    }
+    card.appendChild(wrap);
+    renderHighScores();
+  }
+
+  // ---------- update ----------
+  function updateBattle(dt) {
+    G.timeLeft -= dt;
+    if (G.timeLeft <= 0) { G.timeLeft = 0; defeat('time'); return; }
+    const b = vb.band;
+    const ct = chargeTime();
+    for (let i = 0; i < 5; i++) {
+      if (b === i) G.charge[i] = Math.min(1, G.charge[i] + dt / ct);
+      else G.charge[i] = Math.max(0, G.charge[i] - dt / 0.25);
+    }
+    G.cooldown -= dt;
+    if (b >= 0 && G.charge[b] >= 1 && G.cooldown <= 0) {
+      cast(b); G.charge[b] = 0.25; G.cooldown = CAST_COOLDOWN;
+    }
+    if (G.screen !== 'battle') return; // a cast may have ended the floor
+    if (boss.action) updateBossAction(dt);
+    else { boss.next -= dt; if (boss.next <= 0) startBossAction(); }
+  }
+
+  function updateCommon(dt) {
+    hero.cast = Math.max(0, hero.cast - dt * 4);
+    hero.hurt = Math.max(0, hero.hurt - dt);
+    hero.shield = Math.max(0, hero.shield - dt);
+    boss.flash = Math.max(0, boss.flash - dt);
+    boss.hurt = Math.max(0, boss.hurt - dt);
+    boss.hop = Math.max(0, boss.hop - dt * 2.2);
+    shake = Math.max(0, shake - dt);
+    if (boss.dead) boss.faded = Math.min(1, boss.faded + dt * 1.4);
+    const F = FLOORS[G.floor];
+    const size = 16 * F.boss.scale;
+    for (const pr of projectiles) {
+      pr.t += dt; pr.x += pr.vx * dt;
+      const prog = clamp((pr.x - pr.x0) / (boss.x - size / 2 - pr.x0), 0, 1);
+      let wob = 0;
+      if (pr.band === 2) wob = (Math.floor(pr.t * 24) % 2 ? 4 : -4);
+      else if (pr.band === 3) wob = Math.sin(pr.t * 18) * 6;
+      else if (pr.band === 0) wob = Math.sin(pr.t * 10) * 2 - prog * 6;
+      else if (pr.band === 1) wob = -Math.sin(prog * Math.PI) * 10;
+      pr.y = lerp(pr.y0, pr.ty, prog) + wob;
+      if (Math.random() < 0.7) particles.push({ x: pr.x - 3, y: pr.y, vx: rand(-30, 10), vy: rand(-20, 20), life: rand(0.15, 0.35), t: 0, color: LV.SPELLS[pr.band].color, size: 2 });
+      if (pr.x >= boss.x - size / 2 + 6 && !boss.dead && G.screen === 'battle') { pr.hit = true; hitBoss(pr); }
+      else if (pr.x > W + 10 || boss.dead) pr.hit = true;
+    }
+    projectiles = projectiles.filter((p) => !p.hit);
+    for (const s of enemyShots) {
+      if (s.hit) continue;
+      s.t += dt; s.x += s.vx * dt;
+      const prog = clamp((s.x0 - s.x) / (s.x0 - (hero.x + 8)), 0, 1);
+      s.y = lerp(s.y0, GROUND_Y - 20, prog) + Math.sin(s.t * 14) * 3;
+      if (Math.random() < 0.8) particles.push({ x: s.x + 3, y: s.y, vx: rand(-10, 30), vy: rand(-20, 20), life: rand(0.15, 0.3), t: 0, color: '#ff5c5c', size: 2 });
+      if (s.x <= hero.x + 8) { s.hit = true; if (G.screen === 'battle') hurtHero(); }
+    }
+    enemyShots = enemyShots.filter((s) => !s.hit);
+    for (const p of particles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.grav) p.vy += p.grav * dt; }
+    particles = particles.filter((p) => p.t < p.life);
+    for (const p of popups) { p.t += dt; p.y -= 28 * dt; }
+    popups = popups.filter((p) => p.t < p.life);
+    if (vb.active) trace.push({ t: timeNow, midi: voice.midi, band: vb.band });
+    while (trace.length && timeNow - trace[0].t > TRACE_SECONDS) trace.shift();
+    if (trace.length > 400) trace.splice(0, trace.length - 400);
+  }
+
+  // ---------- render ----------
+  function drawLadder() {
+    const r = range();
+    const top = 46, bottom = GROUND_Y - 14, h = bottom - top, x = 18, w = 8;
+    const a = boss.action;
+    const target = a ? (a.type === 'attack' ? a.band : a.seq[a.idx]) : G.weak;
+    const pulse = 0.5 + 0.5 * Math.sin(timeNow * 6);
+    ctx.fillStyle = 'rgba(7,10,36,0.55)'; ctx.fillRect(x - 4, top - 4, w + 8, h + 8);
+    for (let i = 0; i < 5; i++) {
+      const y1 = bottom - ((i + 1) / 5) * h, y0 = bottom - (i / 5) * h;
+      ctx.globalAlpha = i === target ? 0.55 + 0.3 * pulse : 0.22;
+      ctx.fillStyle = LV.SPELLS[i].color;
+      ctx.fillRect(x, Math.round(y1) + 1, w, Math.round(y0 - y1) - 2);
+    }
+    ctx.globalAlpha = 1;
+    const ty1 = bottom - ((target + 1) / 5) * h, ty0 = bottom - (target / 5) * h;
+    ctx.fillStyle = a && a.type === 'attack' ? '#ff5c5c' : '#ffcc33';
+    ctx.fillRect(x - 3, Math.round(ty1), w + 6, 1); ctx.fillRect(x - 3, Math.round(ty0) - 1, w + 6, 1);
+    ctx.fillRect(x - 3, Math.round(ty1), 1, Math.round(ty0 - ty1)); ctx.fillRect(x + w + 2, Math.round(ty1), 1, Math.round(ty0 - ty1));
+    if (voice.voiced && (voice.sim || voice.level >= settings.threshold)) {
+      const f = clamp((voice.midi - r.lo) / (r.hi - r.lo), -0.03, 1.03);
+      const y = Math.round(bottom - f * h);
+      const col = vb.band >= 0 ? LV.SPELLS[vb.band].color : '#9aa3d9';
+      ctx.fillStyle = col; ctx.fillRect(x - 5, y - 3, w + 10, 6);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 1, y - 1, w + 2, 2);
+      if (vb.band !== target) {
+        const dir = (vb.band < target || vb.pos === 'low') ? -1 : 1; // -1: go up
+        const ay = y + dir * (10 + Math.round(pulse * 3));
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(x + w / 2, ay + dir * 5); ctx.lineTo(x + w / 2 - 5, ay - dir * 2); ctx.lineTo(x + w / 2 + 5, ay - dir * 2); ctx.closePath(); ctx.fill();
+      }
+    } else {
+      ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#9aa3d9'; ctx.globalAlpha = 0.5 + 0.5 * pulse;
+      ctx.fillText('♪', x + w / 2, bottom + 12); ctx.globalAlpha = 1;
+    }
+  }
+
+  function render() {
+    const F = FLOORS[G.floor];
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    if (shake > 0) { ctx.translate(Math.round(rand(-1, 1) * shake * 12), Math.round(rand(-1, 1) * shake * 8)); }
+    const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    g.addColorStop(0, F.sky[0]); g.addColorStop(1, F.sky[1]);
+    ctx.fillStyle = g; ctx.fillRect(-16, -16, W + 32, H + 32);
+    for (const s of stars) {
+      ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(timeNow * s.tw + s.ph));
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(s.x, s.y, s.s, s.s);
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#f4f0d8'; ctx.globalAlpha = 0.9;
+    ctx.fillRect(404, 26, 14, 14); ctx.fillRect(402, 28, 18, 10); ctx.fillRect(406, 24, 10, 18);
+    ctx.fillStyle = F.sky[0]; ctx.fillRect(408, 26, 12, 12); ctx.fillRect(410, 24, 10, 16);
+    ctx.globalAlpha = 1;
+    const hg = ctx.createLinearGradient(0, GROUND_Y - 40, 0, GROUND_Y);
+    hg.addColorStop(0, 'rgba(0,0,0,0)'); hg.addColorStop(1, F.accent);
+    ctx.globalAlpha = 0.28; ctx.fillStyle = hg; ctx.fillRect(0, GROUND_Y - 40, W, 40); ctx.globalAlpha = 1;
+    ctx.fillStyle = F.accent; ctx.globalAlpha = 0.8; ctx.fillRect(0, GROUND_Y - 1, W, 1); ctx.globalAlpha = 1;
+    const gs = LV.SHEETS[F.ground.sheet], ts = gs.tile * 2;
+    const cols = Math.ceil(W / ts) + 1;
+    for (let c = 0; c < cols; c++) {
+      drawTile(ctx, F.ground.sheet, F.ground.top[c % F.ground.top.length], c * ts, GROUND_Y, 2);
+      for (let r = 1; GROUND_Y + r * ts < H + ts; r++) drawTile(ctx, F.ground.sheet, F.ground.body[(c + r) % F.ground.body.length], c * ts, GROUND_Y + r * ts, 2);
+    }
+    ctx.fillStyle = 'rgba(7,10,36,0.35)'; ctx.fillRect(0, GROUND_Y + ts, W, H - GROUND_Y - ts);
+
+    if (G.screen === 'battle') drawLadder();
+
+    // hero
+    const hb = Math.round(Math.sin(timeNow * 3) * 1.5);
+    const hx = hero.x - 16 - Math.round(hero.cast * 3) + (hero.hurt > 0 ? Math.round(Math.sin(hero.hurt * 40) * 2) : 0), hy = GROUND_Y - 32 + hb;
+    if (hero.hurt > 0 && Math.floor(hero.hurt * 12) % 2 === 0) drawTileTinted(ctx, LV.HERO.sheet, LV.HERO.tile, hx, hy, 2, '#ff5c5c', 0.6);
+    else drawTile(ctx, LV.HERO.sheet, LV.HERO.tile, hx, hy, 2);
+    if (hero.shield > 0) {
+      const rr = 22 + (0.5 - hero.shield) * 20;
+      ctx.strokeStyle = '#bff4ff'; ctx.globalAlpha = Math.min(1, hero.shield * 1.6); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(hero.x, GROUND_Y - 16 + hb, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    let chargeBand = -1, chargeVal = 0;
+    for (let i = 0; i < 5; i++) if (G.charge[i] > chargeVal) { chargeVal = G.charge[i]; chargeBand = i; }
+    if (hero.cast > 0 && hero.castBand >= 0) { chargeBand = hero.castBand; chargeVal = Math.max(chargeVal, hero.cast); }
+    if (chargeBand >= 0 && chargeVal > 0.02) {
+      const ox = hero.x + 16, oy = GROUND_Y - 22 + hb;
+      const rad = 2 + chargeVal * 5;
+      ctx.globalAlpha = 0.35 + chargeVal * 0.4; ctx.fillStyle = LV.SPELLS[chargeBand].color;
+      ctx.fillRect(ox - rad, oy - rad, rad * 2, rad * 2);
+      ctx.globalAlpha = 0.9; ctx.fillStyle = '#ffffff'; ctx.fillRect(ox - 1, oy - 1, 2, 2); ctx.globalAlpha = 1;
+    }
+
+    // boss
+    if (boss.faded < 1) {
+      const size = 16 * F.boss.scale;
+      const bob = Math.round(Math.sin(timeNow * (F.boss.fly ? 4 : 2.2)) * (F.boss.fly ? 4 : 2));
+      const hop = Math.round(Math.sin(boss.hop * Math.PI) * 14);
+      const windup = boss.action && boss.action.type === 'attack' ? Math.round(Math.sin(timeNow * 30) * 2) : 0;
+      const bx = boss.x - size / 2 + windup, by = GROUND_Y - size - (F.boss.fly ? 26 : 0) + bob - hop;
+      ctx.save();
+      ctx.globalAlpha = 1 - boss.faded;
+      if (boss.hurt > 0) {
+        const hq = Math.sin((boss.hurt / 0.28) * Math.PI) * 0.18;
+        const py = GROUND_Y - (F.boss.fly ? 26 : 0) + bob - hop;
+        ctx.translate(boss.x, py); ctx.scale(1 + hq, 1 - hq); ctx.translate(-boss.x, -py);
+      }
+      if (boss.flash > 0) drawTileTinted(ctx, F.boss.sheet, F.boss.tile, bx, by, F.boss.scale, '#ffffff', 0.85);
+      else if (boss.tint) drawTileTinted(ctx, F.boss.sheet, F.boss.tile, bx, by, F.boss.scale, boss.tint, 0.38 + 0.1 * Math.sin(timeNow * 8));
+      else drawTile(ctx, F.boss.sheet, F.boss.tile, bx, by, F.boss.scale);
+      ctx.restore();
+      ctx.globalAlpha = 0.35 * (1 - boss.faded); ctx.fillStyle = '#05071a';
+      ctx.fillRect(boss.x - size / 3, GROUND_Y - 3, size * 2 / 3, 3); ctx.globalAlpha = 1;
+    }
+
+    for (const pr of projectiles) {
+      const col = LV.SPELLS[pr.band].color;
+      ctx.fillStyle = col; ctx.globalAlpha = 0.5; ctx.fillRect(Math.round(pr.x) - 6, Math.round(pr.y) - 6, 12, 12);
+      ctx.globalAlpha = 1; ctx.fillRect(Math.round(pr.x) - 4, Math.round(pr.y) - 4, 8, 8);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(pr.x) - 2, Math.round(pr.y) - 2, 4, 4);
+    }
+    for (const s of enemyShots) {
+      ctx.fillStyle = '#ff5c5c'; ctx.globalAlpha = 0.5; ctx.fillRect(Math.round(s.x) - 7, Math.round(s.y) - 7, 14, 14);
+      ctx.globalAlpha = 1; ctx.fillRect(Math.round(s.x) - 5, Math.round(s.y) - 5, 10, 10);
+      ctx.fillStyle = LV.SPELLS[s.band].color; ctx.fillRect(Math.round(s.x) - 2, Math.round(s.y) - 2, 4, 4);
+    }
+    for (const p of particles) {
+      ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+    for (const p of popups) {
+      ctx.globalAlpha = 1 - Math.pow(p.t / p.life, 2);
+      ctx.font = (p.big ? 10 : 8) + 'px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0b1030'; ctx.fillText(p.text, Math.round(p.x) + 1, Math.round(p.y) + 1);
+      ctx.fillStyle = p.color; ctx.fillText(p.text, Math.round(p.x), Math.round(p.y));
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- main loop ----------
+  let last = performance.now();
+  function tick(dt) {
+    timeNow += dt;
+    voice = readVoice();
+    computeBand();
+    if (G.screen === 'battle') updateBattle(dt);
+    if (G.screen === 'tune') updateTune(dt);
+    updateCommon(dt);
+    render();
+    updateHud();
+    if (!$('bossBubble').hidden) positionAboveBoss($('bossBubble'));
+    if (!$('bossAction').hidden) positionAboveBoss($('bossAction'));
+  }
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    tick(dt);
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- wiring ----------
+  function wire() {
+    $('btnMic').addEventListener('click', () => { sfx.init(); enableMic(); });
+    $('btnTune').addEventListener('click', () => openTune());
+    $('btnTuneCancel').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') showStart(); else showTitle(); });
+    $('btnTuneDone').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') newRun(); else showTitle(); });
+    $('btnTuneSkip').addEventListener('click', () => { sfx.play('ui'); newRun(); });
+    $('btnPlay').addEventListener('click', async () => {
+      sfx.init(); sfx.play('ui');
+      if (!validCustom()) { openTune('start'); return; }   // first time: tune the wand
+      if (micState !== 'ok') { const ok = await enableMic(); if (!ok) { showTitle(); return; } }
+      newRun();
+    });
+    $('btnSettings').addEventListener('click', () => { sfx.init(); sfx.play('ui'); showTitle(); });
+    $('btnBack').addEventListener('click', () => { sfx.play('ui'); showStart(); });
+    $('btnTuneNext').addEventListener('click', () => { sfx.play('ui'); tuneListen(2, true); });
+    $('btnTuneRedo').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tuneListen(1, true); });
+    $('btnTuneRetry').addEventListener('click', () => { sfx.play('ui'); tune.lo = 0; tune.hi = 0; tune.ok = false; tuneListen(1, true); });
+    $('btnStart').addEventListener('click', () => { sfx.init(); sfx.play('ui'); newRun(); });
+    $('btnBegin').addEventListener('click', () => { sfx.init(); beginBattle(); });
+    document.querySelectorAll('#segRange button').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.range === 'custom' && !validCustom()) return;
+      settings.range = b.dataset.range; store.set('range', settings.range); refreshRanges();
+      if (G.screen === 'intro') fillIntro();
+      sfx.play('ui');
+    }));
+    document.querySelectorAll('.seg-lang button').forEach((b) => b.addEventListener('click', () => { settings.lang = b.dataset.lang; store.set('lang', settings.lang); applyLang(); sfx.play('ui'); }));
+    $('thresh').addEventListener('input', (e) => { settings.threshold = parseFloat(e.target.value); store.set('threshold', settings.threshold); refreshThreshold(); });
+    $('btnSfx').addEventListener('click', () => { settings.sfx = !settings.sfx; store.set('sfx', settings.sfx); $('btnSfx').setAttribute('aria-pressed', String(settings.sfx)); $('sfxState').textContent = t(settings.sfx ? 'on' : 'off'); sfx.init(); sfx.play('ui'); });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // typing a name, not casting
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 5) { keyHeld[n - 1] = true; sfx.init(); e.preventDefault(); return; }
+      if (e.key === 'Enter' || e.key === ' ') {
+        const ov = ['ovStart', 'ovTitle', 'ovTune', 'ovMap', 'ovIntro', 'ovResult'].map($).find((o) => !o.hidden);
+        if (ov && document.activeElement && ov.contains(document.activeElement) && document.activeElement.tagName === 'BUTTON') return;
+        if (ov) { const primary = ov.querySelector('.btn-gold:not([hidden])'); if (primary) { e.preventDefault(); primary.click(); } }
+      }
+    });
+    window.addEventListener('keyup', (e) => { const n = parseInt(e.key, 10); if (n >= 1 && n <= 5) keyHeld[n - 1] = false; });
+    window.addEventListener('blur', () => { keyHeld.fill(false); tapHeld.fill(false); });
+    window.addEventListener('resize', resize);
+    // helper for automated checks / debugging in the console
+    window.VoxDebug = {
+      G, boss, hero, settings, startFloor, beginBattle, keyHeld, tick, nextFloor, newRun, scores, showMap, showTitle, showStart, openTune,
+      forceAction, setSimVoice(v) { simVoice = v; }, get enemyShots() { return enemyShots; }, tune, bestStars,
+      openTuneNoMic(origin) { tune.origin = origin || 'lobby'; tune.lo = 0; tune.hi = 0; tune.ok = false; G.screen = 'tune'; tuneListen(1, true); showOverlay('tune'); },
+    };
+  }
+
+  async function init() {
+    buildSlots();
+    refreshThreshold();
+    $('btnSfx').setAttribute('aria-pressed', String(settings.sfx));
+    applyLang();
+    wire();
+    try { await loadImages(); } catch (e) { console.error(e); }
+    $('titleArt').appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 5));
+    $('startArt').appendChild(spriteCanvas(LV.HERO.sheet, LV.HERO.tile, 7));
+    renderHearts();
+    resize();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
+    setTimeout(resize, 400);
+    G.floor = 0; G.weak = FLOORS[0].weak[0]; boss.hp = boss.maxHp = FLOORS[0].hp; G.floorTime = FLOORS[0].time; G.timeLeft = G.floorTime;
+    updateHudStatic();
+    showStart();
+    requestAnimationFrame(loop);
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
