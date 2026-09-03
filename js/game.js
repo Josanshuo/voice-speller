@@ -352,6 +352,7 @@
     if (G.screen === 'result') fillResult(G.resultKind);
     if (G.screen === 'map') renderMap();
     if (G.screen === 'tune') renderTune();
+    renderStartHint();
     if (boss.action) showAction();
   }
 
@@ -501,6 +502,11 @@
     ['start', 'title', 'tune', 'map', 'intro', 'result'].forEach((n) => { $('ov' + n[0].toUpperCase() + n.slice(1)).hidden = name !== n; });
     $('app').dataset.screen = name || 'battle';
   }
+  function renderStartHint() {
+    const hint = $('startHint');
+    if (validCustom()) { const r = settings.customRange; hint.textContent = t('startHintTuned', { lo: P.midiToName(r.lo), hi: P.midiToName(r.hi) }); }
+    else hint.textContent = t('startHint');
+  }
   function showStart() {
     clearTimeout(resultTimer);
     G.screen = 'start';
@@ -509,6 +515,7 @@
     const el = $('startBest');
     if (best) { el.textContent = t('startBest', { n: best.score, name: best.name || '\u2014' }); el.hidden = false; }
     else el.hidden = true;
+    renderStartHint();
     showOverlay('start');
     updateHudStatic();
   }
@@ -1240,7 +1247,12 @@
     $('btnTuneCancel').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') showStart(); else showTitle(); });
     $('btnTuneDone').addEventListener('click', () => { sfx.play('ui'); if (tune.origin === 'start') newRun(); else showTitle(); });
     $('btnTuneSkip').addEventListener('click', () => { sfx.play('ui'); newRun(); });
-    $('btnPlay').addEventListener('click', () => { sfx.init(); sfx.play('ui'); openTune('start'); });
+    $('btnPlay').addEventListener('click', async () => {
+      sfx.init(); sfx.play('ui');
+      if (!validCustom()) { openTune('start'); return; }   // first time: tune the wand
+      if (micState !== 'ok') { const ok = await enableMic(); if (!ok) { showTitle(); return; } }
+      newRun();
+    });
     $('btnSettings').addEventListener('click', () => { sfx.init(); sfx.play('ui'); showTitle(); });
     $('btnBack').addEventListener('click', () => { sfx.play('ui'); showStart(); });
     $('btnTuneNext').addEventListener('click', () => { sfx.play('ui'); tuneListen(2, true); });

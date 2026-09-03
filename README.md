@@ -25,10 +25,12 @@ Opening `index.html` directly also works in Chrome and Edge.
 
 ## How to play
 
-1. Press **Start**. The game asks for the microphone and opens **Tune your
-   wand**: sing your lowest comfortable note, confirm it, then your highest,
-   and the five spell bands are spread across your own range. *Skip tuning*
-   keeps the current preset. **Settings & scores** holds the mic test, *Mic
+1. Press **Start**. The first time, the game asks for the microphone and
+   opens **Tune your wand**: sing your lowest comfortable note, confirm it,
+   then your highest, and the five spell bands are spread across your own
+   range (*Skip tuning* keeps the current preset). The tuning is remembered,
+   so later presses of Start go straight to the tower; retune any time from
+   **Settings & scores**. **Settings & scores** holds the mic test, *Mic
    sensitivity* (keep quiet room noise under the gold line), the presets
    (*Kid* E3 – G#6, *Grown-up* C2 – E5, *Wide* C2 – C7) and the high-score table.
 3. Each floor shows the monster's weakness and a voice tip. Hold a steady note
